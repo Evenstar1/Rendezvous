@@ -112,7 +112,9 @@ const [surpriseSpin, setSurpriseSpin] = useState(false);
         </header>
 
         <div className="border-b border-ink/15 px-4 py-3 sm:px-6">
-          <SkyPreview interactive={false} />
+          <div className="mx-auto w-full max-w-md">
+            <SkyPreview interactive={false} />
+          </div>
           <p className="mt-2 text-xs text-ink/60">Hover a beacon. Gold dashed line = ecliptic; red glows = deep fields.</p>
         </div>
 {listView ? (
