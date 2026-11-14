@@ -150,7 +150,7 @@ export function Hero({ acquire, onTarget, activeId, packs, onGuide, onAtlas }: P
               ))}
               <button
                 type="button"
-                onClick={onAtlas}
+onClick={onAtlas}
                 className="micro min-h-9 border border-cyan/60 bg-cyan/10 px-3 text-cyan transition-colors hover:border-cyan hover:bg-cyan hover:text-black"
                 aria-label={`Browse ${DESTINATIONS.length} more destinations`}
               >

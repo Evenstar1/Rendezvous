@@ -67,8 +67,8 @@ const [surpriseSpin, setSurpriseSpin] = useState(false);
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[70] bg-black/95 backdrop-blur-md">
-      <div className="flex h-full flex-col">
+    <div className="fixed inset-0 z-[70] bg-black/95 backdrop-blur-md" onClick={onClose}>
+      <div className="flex h-full flex-col" onClick={(e) => e.stopPropagation()}>
         <header className="border-b border-ink/15 px-4 py-4 sm:px-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>

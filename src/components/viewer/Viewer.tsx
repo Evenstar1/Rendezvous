@@ -411,7 +411,7 @@ const runLive = useCallback(async (fov = view.fovL2, force = false) => {
             ? 'The bundled snapshot could not be unpacked in this browser.'
             : 'Unpacking SPHEREx Level-2 exposures.'
     : sky.status === 'error'
-      ? 'Could not pull HiPS tiles for this position from IRSA. Check your connection, or load one of the five mission targets: their data is on board and needs no network.'
+      ? ''
       : `Pulling HiPS tiles from IRSA${sky.total ? `: layer ${Math.min(sky.total, sky.done + 1)} of ${sky.total}` : ''}.`;
   const opLabel =
     view.op === 'diff'
