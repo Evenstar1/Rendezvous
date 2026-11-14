@@ -229,13 +229,17 @@ const [surpriseSpin, setSurpriseSpin] = useState(false);
 export function AtlasMap({
   expedition = null,
   height = 224,
+  aspectRatio,
   interactive = true,
   onSelect,
+  onReady,
 }: {
   expedition?: number | null;
   height?: number;
+  aspectRatio?: number;
   interactive?: boolean;
   onSelect?: (id: string) => void;
+  onReady?: (ok: boolean) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 const [hoverId, setHoverId] = useState<string | null>(null);
@@ -258,8 +262,9 @@ const reducedMotion = typeof window !== 'undefined' && !!window.matchMedia && wi
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
       const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const h = aspectRatio ? rect.width / aspectRatio : height;
       canvas.width = Math.max(1, Math.floor(rect.width * dpr));
-      canvas.height = Math.max(1, Math.floor(height * dpr));
+      canvas.height = Math.max(1, Math.floor(h * dpr));
     };
     resize();
     const ro = new ResizeObserver(resize);
@@ -350,6 +355,13 @@ const reducedMotion = typeof window !== 'undefined' && !!window.matchMedia && wi
         ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
         ctx.fill();
       });
+      if (!canvas.dataset.ready) {
+        canvas.dataset.ready = '1';
+        const probe = ctx.getImageData(0, 0, Math.min(W, 20), Math.min(H, 20)).data;
+        let nonBg = 0;
+        for (let i = 0; i < probe.length; i += 4) if (probe[i] + probe[i + 1] + probe[i + 2] > 12) nonBg++;
+        onReady?.(nonBg > 0);
+      }
       if (!reducedMotion && interactive) raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
@@ -396,7 +408,7 @@ const reducedMotion = typeof window !== 'undefined' && !!window.matchMedia && wi
   }, [expedition, interactive, hoverId, onSelect]);
 
   return (
-    <div style={{ height }} className="w-full overflow-hidden rounded-sm border border-ink/15 bg-black/60">
+    <div style={aspectRatio ? { aspectRatio: String(aspectRatio) } : { height }} className="w-full overflow-hidden rounded-sm border border-ink/15 bg-black/60">
       <canvas ref={canvasRef} className="h-full w-full" />
     </div>
   );
