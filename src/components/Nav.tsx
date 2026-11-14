@@ -10,7 +10,7 @@ const LINKS: [string, string][] = [
   ['Data', 'data'],
 ];
 
-export function Nav({ onGuide, onPalette }: { onGuide: () => void; onPalette: () => void }) {
+export function Nav({ onGuide, onPalette, onAtlas }: { onGuide: () => void; onPalette: () => void; onAtlas: () => void }) {
   const [solid, setSolid] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -54,7 +54,10 @@ export function Nav({ onGuide, onPalette }: { onGuide: () => void; onPalette: ()
         </nav>
 
         <div className="flex items-center gap-2">
-          <button type="button" onClick={onPalette} className="micro hidden min-h-10 items-center gap-2 border border-ink/25 px-3 text-ink/70 transition-colors hover:border-ink hover:text-ink md:flex" aria-label="Open command palette">
+          <button type="button" onClick={onAtlas} className="micro hidden min-h-10 items-center border border-ink/25 px-3 text-ink/70 transition-colors hover:border-ink hover:text-ink md:flex">
+              Destinations
+            </button>
+            <button type="button" onClick={onPalette} className="micro hidden min-h-10 items-center gap-2 border border-ink/25 px-3 text-ink/70 transition-colors hover:border-ink hover:text-ink md:flex" aria-label="Open command palette">
             Search
             <kbd className="num border border-ink/25 px-1 py-0.5 text-[0.6875rem]">⌘K</kbd>
           </button>

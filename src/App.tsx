@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CommandPalette } from './components/CommandPalette';
 import { DataSection, Footer } from './components/DataSection';
 import { Guide } from './components/Guide';
@@ -8,6 +8,8 @@ import { Nav } from './components/Nav';
 import { Targets } from './components/Targets';
 import { Viewer } from './components/viewer/Viewer';
 import { useAllPacks } from './lib/usePacks';
+import { Atlas } from './components/Atlas';
+import { decimalYear, positionAtEpoch } from './lib/atlas';
 import { isEmbed, useView } from './state';
 
 function Site() {
@@ -15,7 +17,23 @@ function Site() {
   const packs = useAllPacks();
   const [guide, setGuide] = useState(false);
   const [palette, setPalette] = useState(false);
+  const [atlas, setAtlas] = useState(false);
   const active = view.source === 'l2' ? view.targetId : null;
+
+  const launchDestination = useCallback(async (dest: any, blind: boolean) => {
+    const pos = positionAtEpoch(dest.ra, dest.dec, dest.pmra, dest.pmdec, 2000, decimalYear());
+    await acquire(`${pos.ra.toFixed(6)} ${pos.dec.toFixed(6)}`);
+    const q = new URLSearchParams(window.location.search || window.location.hash.replace(/^#/, ''));
+    q.set('live', '1');
+    if (blind) q.set('blind', '1');
+    else q.delete('blind');
+    try {
+      window.history.replaceState(null, '', `${window.location.pathname}?${q.toString()}`);
+    } catch {
+      /* ignore */
+    }
+    setAtlas(false);
+  }, [acquire]);
 
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
@@ -38,7 +56,7 @@ function Site() {
       <a href="#viewer" className="sr-only z-[60] bg-ink px-4 py-3 text-sm font-semibold text-black focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
         Skip to the viewer
       </a>
-      <Nav onGuide={() => setGuide(true)} onPalette={() => setPalette(true)} />
+      <Nav onGuide={() => setGuide(true)} onPalette={() => setPalette(true)} onAtlas={() => setAtlas(true)} />
       <main>
         <Hero acquire={acquire} onTarget={selectTarget} activeId={active} packs={packs} onGuide={() => setGuide(true)} />
         <Viewer view={view} set={set} acquire={acquire} toL2={toL2} toSky={toSky} onLoadPack={loadCustomPack} onGuide={() => setGuide(true)} />
@@ -48,6 +66,7 @@ function Site() {
       </main>
       <Footer />
       <Guide open={guide} onClose={() => setGuide(false)} />
+      <Atlas open={atlas} onClose={() => setAtlas(false)} onLaunch={launchDestination} />
       <CommandPalette
         open={palette}
         onClose={() => setPalette(false)}
