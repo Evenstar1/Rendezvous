@@ -437,7 +437,7 @@ Rendezvous uses exclusively authentic, calibrated astronomical data. All externa
 - **CDS Strasbourg**: HiPS hierarchical progressive survey tile access via Aladin / CDS servers, and astronomical name resolution via SIMBAD.
 - **Two Micron All Sky Survey (2MASS)**: Near-infrared $J$, $H$, and $K_s$ survey mosaics.
 - **Space Telescope Science Institute (STScI)**: Digitized Sky Survey (DSS2) photographic plate scans.
-- **Canadian Space Agency (CSA) / CADC NEOSSat**: Space-agency asteroid and orbital tracking partner attribution.
+- **Imagery note**: The full-page background star field and the SPHEREx observatory image in the Instrument section are AI-generated illustrations used for presentation. They are not observational data; all scientific pixels, spectra, and measurements in Rendezvous come from the missions and archives listed above.
 
 ---
 
