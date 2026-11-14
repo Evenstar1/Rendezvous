@@ -589,9 +589,10 @@ export function MoversChart({
                 // East is left, North is up
                 const mx = cx - r * Math.sin(rad);
                 const my = cy - r * Math.cos(rad);
-                const isHover = hoverId === m.id || selectedId === m.id;
-                const dotColor = m.match === 'target' ? 'var(--color-cyan)' : m.consistent ? 'var(--color-gaia)' : 'var(--color-signal)';
-                const dotR = Math.max(4, Math.min(9, Math.sqrt(m.sn) * 1.8));
+const isHover = hoverId === m.id;
+                  const isActive = isHover || selectedId === m.id;
+                  const dotColor = m.match === 'target' ? 'var(--color-cyan)' : m.consistent ? 'var(--color-gaia)' : 'var(--color-signal)';
+                  const dotR = Math.max(4, Math.min(9, Math.sqrt(m.sn) * 1.8));
 
                 return (
                   <g
@@ -605,7 +606,7 @@ export function MoversChart({
                     }}
                   >
                     {/* Velocity vector from center */}
-                    <line x1={cx} y1={cy} x2={mx} y2={my} stroke={dotColor} strokeWidth={isHover ? 2 : 1} strokeOpacity={isHover ? 0.9 : 0.35} strokeDasharray={m.match ? undefined : '2 3'} />
+                    <line x1={cx} y1={cy} x2={mx} y2={my} stroke={dotColor} strokeWidth={isActive ? 2 : 1} strokeOpacity={isActive ? 0.9 : 0.35} strokeDasharray={m.match ? undefined : '2 3'} />
                     {isHover && (
                       <circle cx={mx} cy={my} r={dotR + 5} fill="none" stroke={dotColor} strokeWidth="1.5" strokeOpacity="0.8">
                         <animate attributeName="r" values={`${dotR + 3};${dotR + 9};${dotR + 3}`} dur="1.2s" repeatCount="indefinite" />
