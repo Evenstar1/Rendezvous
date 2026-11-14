@@ -71,14 +71,17 @@ function Site() {
         <Hero acquire={acquire} onTarget={selectTarget} activeId={active} packs={packs} onGuide={() => setGuide(true)} onAtlas={() => setAtlas(true)} />
 <section id="atlas-teaser" className="wrap py-16">
           <p className="eyebrow text-ink/70">Where should I point it?</p>
-          <div className="mt-6 grid gap-6">
-            <SkyPreview onOpen={() => setAtlas(true)} />
+          <div className="mt-6 grid items-center gap-6 lg:grid-cols-[minmax(240px,360px)_1fr]">
+            <div className="mx-auto w-full max-w-[360px] min-w-[240px]">
+              <SkyPreview onOpen={() => setAtlas(true)} />
+              <span className="micro mt-2 block text-ink/60">Open full atlas →</span>
+            </div>
             <div className="grid gap-3 sm:grid-cols-3">
               {['Proxima Centauri', 'Mira (omicron Ceti)', 'South Ecliptic Pole'].map((name) => {
                 const dest = DESTINATIONS.find((d) => d.name === name);
                 if (!dest) return null;
                 const coords = formatCatalogCoords(dest.ra, dest.dec);
-                return (
+  return (
                   <button key={dest.id} type="button" onClick={() => launchDestination(dest, false)} className="flex min-h-[6.5rem] flex-col border border-ink/20 bg-panel2 p-4 text-left transition-colors hover:border-cyan">
                     <p className="micro text-cyan">{dest.name}</p>
                     <p className="mt-2 line-clamp-2 text-sm text-ink/75">{dest.note}</p>

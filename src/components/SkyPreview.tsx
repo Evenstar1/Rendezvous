@@ -66,12 +66,12 @@ export function SkyPreview({ onOpen }: { onOpen: () => void }) {
       <svg viewBox="0 0 800 400" width="100%" role="img" aria-label={`Sky map of ${DESTINATIONS.length} SPHEREx destinations`}>
         <ellipse cx="400" cy="200" rx="368" ry="184" fill="#050814" stroke="rgba(240,240,250,0.25)" strokeWidth="1.5" />
         {graticule.map((d, i) => (
-          <path key={i} d={d} fill="none" stroke="rgba(240,240,250,0.08)" strokeWidth="1" />
+          <path key={i} d={d} fill="none" stroke="rgba(240,240,250,0.08)" strokeWidth="0.75" />
         ))}
         <path d={path(ecliptic)} fill="none" stroke="rgba(242,214,96,0.75)" strokeWidth="1.5" strokeDasharray="6 6" />
         {poles.map((p, i) => (
           <g key={i}>
-            <circle cx={p.x} cy={p.y} r="12" fill="rgba(255,92,77,0.18)" />
+            <circle cx={p.x} cy={p.y} r="12" fill="rgba(255,92,77,0.12)" />
             <circle cx={p.x} cy={p.y} r="4" fill="#ff5c4d" />
           </g>
         ))}
@@ -79,7 +79,7 @@ export function SkyPreview({ onOpen }: { onOpen: () => void }) {
           const p = project(d.ra, d.dec);
           const color = EXPEDITION_COLOR[d.expedition] || '#7aa8ff';
           return (
-            <circle key={d.id} cx={p.x} cy={p.y} r="3.5" fill={color} stroke="#000" strokeWidth="0.75">
+            <circle key={d.id} cx={p.x} cy={p.y} r="10" fill={color} stroke="#000" strokeWidth="0.75">
               <title>{d.name}</title>
             </circle>
           );
