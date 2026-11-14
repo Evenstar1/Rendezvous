@@ -118,6 +118,7 @@ if (t && TARGETS.some((x) => x.id === t)) v = { ...v, ...targetView(t) };
   const dec = Number(q.get('dec'));
   if (q.has('ra') && q.has('dec') && Number.isFinite(ra) && Number.isFinite(dec) && ra >= 0 && ra < 360 && Math.abs(dec) <= 90) v = { ...v, ...coordView(ra, dec, q.get('name') ?? undefined) };
   if (q.get('src') === 'sky') v = { ...v, source: 'sky', targetId: v.targetId };
+if (q.get('live') === '1') v = { ...v, source: 'l2' };
   const fov = Number(q.get('fov'));
   if (fov > 0) {
     if (v.source === 'l2') v.fovL2 = FOV_L2.reduce((a, b) => (Math.abs(b - fov) < Math.abs(a - fov) ? b : a));
