@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { TARGETS } from '../data/targets';
 import { copyText } from '../lib/science';
+import { jumpTo } from '../lib/usePacks';
 import { toQuery, type View } from '../state';
 import { cn } from '../utils/cn';
 import { Arrow } from './ui';
@@ -43,7 +44,7 @@ export function CommandPalette({ open, onClose, view, set, selectTarget, toL2, t
   const actions = useMemo<Action[]>(() => {
     const l2 = view.source === 'l2';
     const list: Action[] = [
-      ...TARGETS.map((t) => ({ id: 't-' + t.id, group: 'Fields' as Group, label: `Load ${t.name}`, hint: t.kind, run: () => selectTarget(t.id) })),
+      ...TARGETS.map((t) => ({ id: 't-' + t.id, group: 'Fields' as Group, label: `Load ${t.name}`, hint: t.kind, run: () => { selectTarget(t.id); jumpTo('viewer'); } })),
       { id: 'src-sky', group: 'Fields', label: 'Switch to all-sky (any coordinates)', hint: l2 ? 'Live HiPS mosaics' : 'Active', run: () => toSky() },
       { id: 'src-l2', group: 'Fields', label: 'Switch to Level-2 time series', hint: 'Bundled SPHEREx exposures', run: () => toL2() },
       ...(view.mode === 'guided' ? [{ id: 'mode-r', group: 'Fields' as Group, label: 'Enable Research mode', hint: 'Precision controls and exports', run: () => set({ mode: 'research' }) }] : [{ id: 'mode-g', group: 'Fields' as Group, label: 'Enable Guided mode', hint: 'Fewer controls, plain-language tips', run: () => set({ mode: 'guided' }) }]),
@@ -89,6 +90,7 @@ export function CommandPalette({ open, onClose, view, set, selectTarget, toL2, t
       },
       { id: 'go-top', group: 'Go to', label: 'Go to top', run: () => scrollTo('top') },
       { id: 'go-viewer', group: 'Go to', label: 'Go to viewer', run: () => scrollTo('viewer') },
+      { id: 'enter-coords', group: 'Go to', label: 'Enter coordinates', hint: 'Focus the Acquire bar', run: () => { scrollTo('top'); setTimeout(() => document.querySelector<HTMLInputElement>('input[placeholder^="RA Dec"]')?.focus(), 50); } },
       { id: 'go-targets', group: 'Go to', label: 'Go to targets', run: () => scrollTo('targets') },
       { id: 'go-instrument', group: 'Go to', label: 'Go to instrument', run: () => scrollTo('instrument') },
       { id: 'go-data', group: 'Go to', label: 'Go to data & embed', run: () => scrollTo('data') },

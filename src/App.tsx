@@ -7,7 +7,7 @@ import { Instrument } from './components/Instrument';
 import { Nav } from './components/Nav';
 import { Targets } from './components/Targets';
 import { Viewer } from './components/viewer/Viewer';
-import { useAllPacks } from './lib/usePacks';
+import { jumpTo, useAllPacks } from './lib/usePacks';
 import { Atlas } from './components/Atlas';
 import { SkyPreview } from './components/SkyPreview';
 import { DESTINATIONS } from './data/destinations';
@@ -30,6 +30,7 @@ function Site() {
       window.sessionStorage.setItem('rv-blind-name', dest.name);
       set({ label: 'Blind Mission' });
     }
+    jumpTo('viewer');
     const q = new URLSearchParams(window.location.search || window.location.hash.replace(/^#/, ''));
     q.set('live', '1');
     if (blind) q.set('blind', '1');
@@ -96,7 +97,7 @@ function Site() {
             See all {DESTINATIONS.length} destinations →
           </button>
         </section>
-        <Viewer view={view} set={set} acquire={acquire} toL2={toL2} toSky={toSky} onLoadPack={loadCustomPack} onGuide={() => setGuide(true)} onAtlas={() => setAtlas(true)} />
+        <Viewer view={view} set={set} toL2={toL2} toSky={toSky} onLoadPack={loadCustomPack} onGuide={() => setGuide(true)} onAtlas={() => setAtlas(true)} />
 
         <Targets packs={packs} activeId={active} onSelect={selectTarget} />
         <Instrument />
@@ -122,10 +123,10 @@ function Site() {
 }
 
 function Embed() {
-  const { view, set, acquire, toL2, toSky, loadCustomPack } = useView();
+  const { view, set, toL2, toSky, loadCustomPack } = useView();
   return (
     <main>
-      <Viewer view={view} set={set} acquire={acquire} toL2={toL2} toSky={toSky} onLoadPack={loadCustomPack} onGuide={() => {}} embed />
+      <Viewer view={view} set={set} toL2={toL2} toSky={toSky} onLoadPack={loadCustomPack} onGuide={() => {}} embed />
     </main>
   );
 }

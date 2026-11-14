@@ -9,7 +9,7 @@ import { applyOp, autoHi, type Stretch } from '../../lib/render';
 import type { Grid } from '../../lib/spherex';
 import type { View } from '../../state';
 import { cn } from '../../utils/cn';
-import { AcquireBar, Seg } from '../ui';
+import { Seg } from '../ui';
 import { Meta } from './Charts';
 import { Research } from './Research';
 import { Controls } from './Controls';
@@ -25,7 +25,6 @@ const SPEEDS = [0.5, 1, 2, 4, 8, 12];
 interface Props {
   view: View;
   set: (p: Partial<View>) => void;
-  acquire: (text: string) => Promise<{ ok: boolean; msg: string }>;
   toL2: () => void;
   toSky: () => void;
   onLoadPack: (p: Pack) => void;
@@ -129,7 +128,7 @@ function Transport({ shots, i, playing, onToggle, onSeek, fps, onFps }: { shots:
   );
 }
 
-export function Viewer({ view, set, acquire, toL2, toSky, onLoadPack, onGuide, onAtlas, embed }: Props) {
+export function Viewer({ view, set, toL2, toSky, onLoadPack, onGuide, onAtlas, embed }: Props) {
   const sectionRef = useRef<HTMLElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const reduced = useMemo(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches, []);
@@ -483,8 +482,6 @@ const runLive = useCallback(async (fov = view.fovL2, force = false) => {
                 e.target.value = '';
               }}
             />
-            <AcquireBar onAcquire={acquire} compact onDestinations={onAtlas} />
-            {onAtlas && <button type="button" onClick={onAtlas} className="micro min-h-10 border border-cyan/40 px-3 text-cyan transition-colors hover:border-cyan hover:bg-cyan hover:text-black">Destinations</button>}
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <Seg
                 className="w-52"
@@ -501,34 +498,8 @@ const runLive = useCallback(async (fov = view.fovL2, force = false) => {
               </button>
               <span className="micro hidden text-ink/65 sm:inline">⌘K actions</span>
             </div>
-            {fitsMsg && <p role="status" className="mt-2 text-xs text-signal">{fitsMsg}</p>}
-            {(!hasSnapshot || liveLoading || livePrompt || liveError) && (
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                {livePrompt && (
-                  <span className="text-xs text-ink/75">
-                    {livePrompt.count} images found, about {livePrompt.mb} MB. Load anyway?
-                  </span>
-                )}
-                {(livePrompt || (!hasSnapshot && !liveLoading)) && (
-                  <button type="button" onClick={() => { setLivePrompt(null); void runLive(view.fovL2, true); }} disabled={liveLoading} className="micro min-h-10 border border-ink/25 px-3 text-ink/75 transition-colors hover:border-ink hover:bg-ink hover:text-black disabled:opacity-50">
-                    {livePrompt ? 'Load anyway' : 'Load SPHEREx data (live)'}
-                  </button>
-                )}
-                {liveLoading && (
-                  <button type="button" onClick={() => liveCancel?.abort()} className="micro min-h-10 border border-ink/25 px-3 text-ink/75 transition-colors hover:border-ink hover:bg-ink hover:text-black">
-                    Cancel
-                  </button>
-                )}
-                {liveError && (
-                  <button type="button" onClick={() => void runLive(view.fovL2, true)} className="micro min-h-10 border border-ink/25 px-3 text-ink/75 transition-colors hover:border-ink hover:bg-ink hover:text-black">
-                    Retry
-                  </button>
-                )}
-                {liveError && <p role="status" className="text-xs text-signal">{liveError}</p>}
-                {liveError && onAtlas && <button type="button" onClick={onAtlas} className="micro min-h-10 border border-cyan/40 px-3 text-cyan transition-colors hover:border-cyan hover:bg-cyan hover:text-black">Try a destination →</button>}
-              </div>
-            )}
-          </div>
+{fitsMsg && <p role="status" className="mt-2 text-xs text-signal">{fitsMsg}</p>}
+            </div>
         </div>
 
         <div className="mt-8 grid grid-cols-1 gap-5 xl:grid-cols-12 xl:items-start">
@@ -537,6 +508,18 @@ const runLive = useCallback(async (fov = view.fovL2, force = false) => {
           </aside>
 
           <div className="order-1 flex min-w-0 flex-col xl:order-2 xl:col-span-6">
+{(liveLoading || livePrompt || liveError) && (
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded border border-ink/15 bg-black/40 px-3 py-2">
+              {liveLoading && <span className="text-xs text-ink/75">Fetching SPHEREx frames: {liveDone} / {liveTotal || '?'}</span>}
+              {liveLoading && <div className="h-1.5 w-40 overflow-hidden rounded bg-ink/15"><div className="h-full bg-cyan transition-all" style={{ width: `${liveTotal ? (liveDone / liveTotal) * 100 : 0}%` }} /></div>}
+              {livePrompt && <span className="text-xs text-ink/75">{livePrompt.count} images found, about {livePrompt.mb} MB. Load anyway?</span>}
+              {livePrompt && <button type="button" onClick={() => { setLivePrompt(null); void runLive(view.fovL2, true); }} className="micro min-h-9 border border-ink/25 px-3 text-ink/75 transition-colors hover:border-ink hover:bg-ink hover:text-black">Load anyway</button>}
+              {liveLoading && <button type="button" onClick={() => liveCancel?.abort()} className="micro min-h-9 border border-ink/25 px-3 text-ink/75 transition-colors hover:border-ink hover:bg-ink hover:text-black">Cancel</button>}
+              {liveError && <p role="status" className="text-xs text-signal">{liveError}</p>}
+              {liveError && <button type="button" onClick={() => void runLive(view.fovL2, true)} className="micro min-h-9 border border-ink/25 px-3 text-ink/75 transition-colors hover:border-ink hover:bg-ink hover:text-black">Retry</button>}
+              {liveError && onAtlas && <button type="button" onClick={onAtlas} className="micro min-h-9 border border-cyan/40 px-3 text-cyan transition-colors hover:border-cyan hover:bg-cyan hover:text-black">Try a destination →</button>}
+            </div>
+            )}
             <div className="statusbar" aria-label="Frame status">
               {statusItems.map(([k, v], n) => (
                 <span key={k} className="flex items-baseline gap-2 whitespace-nowrap">
