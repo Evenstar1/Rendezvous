@@ -115,7 +115,7 @@ const [surpriseSpin, setSurpriseSpin] = useState(false);
           <div className="mx-auto w-full max-w-md">
             <SkyPreview interactive={false} />
           </div>
-          <p className="mt-2 text-xs text-ink/60">Hover a beacon. Gold dashed line = ecliptic; red glows = deep fields.</p>
+          <p className="mt-1 text-xs text-ink/60">Hover a beacon. Gold dashed line = ecliptic; red glows = deep fields.</p>
         </div>
 {listView ? (
           <div className="flex-1 overflow-auto px-4 py-6 sm:px-6">
@@ -147,7 +147,7 @@ const [surpriseSpin, setSurpriseSpin] = useState(false);
             </table>
           </div>
         ) : (
-          <div className="flex-1 overflow-x-auto overflow-y-hidden px-4 py-6 sm:px-6">
+          <div className="flex-1 overflow-x-auto overflow-y-auto px-4 py-6 sm:px-6">
             <div className="flex h-full gap-4">
             {filtered.map((dest) => {
               const pos = positionAtEpoch(dest.ra, dest.dec, dest.pmra, dest.pmdec, 2000, now);
@@ -156,9 +156,9 @@ const [surpriseSpin, setSurpriseSpin] = useState(false);
               const isFlipped = !!flipped[dest.id];
               const accent = EXPEDITION_COLOR[dest.expedition];
               return (
-                <article key={dest.id} className="relative h-[clamp(18rem,45vh,26rem)] w-[min(22rem,85vw)] shrink-0 [perspective:1200px]">
+                <article key={dest.id} className="relative h-[clamp(22rem,50vh,30rem)] w-[min(22rem,85vw)] shrink-0 [perspective:1200px]">
                   <div className={cn('relative h-full w-full transition-transform duration-300 [transform-style:preserve-3d]', isFlipped && '[transform:rotateY(180deg)]')}>
-                    <div className="absolute inset-0 flex flex-col overflow-hidden border border-ink/20 bg-panel2 p-4 [backface-visibility:hidden]">
+                    <div className="absolute inset-0 flex flex-col overflow-hidden border border-ink/20 bg-panel2 p-3 [backface-visibility:hidden]">
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="micro" style={{ color: accent }}>{EXPEDITIONS.find((e) => e.id === dest.expedition)?.name}</p>
@@ -167,7 +167,7 @@ const [surpriseSpin, setSurpriseSpin] = useState(false);
                         <span className="micro border border-ink/25 px-2 py-1 text-ink/75">{dest.difficulty}</span>
                       </div>
 
-                      <div className="mt-4 border border-ink/15 bg-black/40 p-3 font-mono text-xs">
+                      <div className="mt-3 border border-ink/15 bg-black/40 p-2 font-mono text-xs">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-ink/65">J2000</span>
                           <span className="text-ink">{coords.sex}</span>
@@ -185,12 +185,12 @@ const [surpriseSpin, setSurpriseSpin] = useState(false);
                         <div className="mt-2 text-ink/65">{coords.dec}</div>
                       </div>
 
-                      <p className="mt-4 text-sm text-ink/80">{dest.why}</p>
-                      <p className="mt-2 text-sm text-ink/65">Look for: {dest.look}</p>
-                      <p className="mt-2 text-xs text-ink/60">FOV {dest.fov}' · Mode {dest.mode} · {formatLightTravel(dest.distanceLy)}</p>
-                      <p className="mt-2 text-xs text-ink/60">{dest.verified ? 'Verified coordinates' : dest.verificationNote}</p>
+                      <p className="mt-2 text-sm text-ink/80">{dest.why}</p>
+                      <p className="mt-1 text-sm text-ink/65">Look for: {dest.look}</p>
+                      <p className="mt-1 text-xs text-ink/60">FOV {dest.fov}' · Mode {dest.mode} · {formatLightTravel(dest.distanceLy)}</p>
+                      <p className="mt-1 text-xs text-ink/60">{dest.verified ? 'Verified coordinates' : dest.verificationNote}</p>
 
-                      <div className="mt-auto flex gap-2 pt-4">
+                      <div className="mt-auto flex gap-2 pt-2">
                         <button type="button" onClick={() => onLaunch(dest, blind)} className="btn btn-sm flex-1">
                           Launch
                         </button>
@@ -200,7 +200,7 @@ const [surpriseSpin, setSurpriseSpin] = useState(false);
                       </div>
                     </div>
 
-                    <div className="absolute inset-0 flex flex-col overflow-hidden border border-ink/20 bg-panel2 p-4 [backface-visibility:hidden] [transform:rotateY(180deg)]">
+                    <div className="absolute inset-0 flex flex-col overflow-hidden border border-ink/20 bg-panel2 p-3 [backface-visibility:hidden] [transform:rotateY(180deg)]">
                       <h3 className="display text-xl">{blind ? 'Blind Mission' : dest.name}</h3>
                       <p className="mt-2 text-sm text-ink/75">{dest.note}</p>
                       <p className="mt-3 text-xs text-ink/65">Coverage: {dest.coverageImages !== null ? `${dest.coverageImages} SPHEREx images / ${dest.coverageEpochs} epochs` : 'check on launch'}</p>
