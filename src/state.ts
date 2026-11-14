@@ -28,6 +28,7 @@ export interface View {
   moverSn: number;
   tools: { grid: boolean; measure: boolean; movers: boolean };
   source: 'l2' | 'sky';
+  liveRequested: boolean;
   targetId: string | null;
   /** requested coordinates: field centre in all-sky mode, a marker inside a snapshot field */
   ra: number;
@@ -58,7 +59,7 @@ export const FOV_SKY = [6, 12, 24, 48];
 function targetView(id: string): Partial<View> {
   const t = [...listCustomTargets(), ...TARGETS].find((x) => x.id === id) ?? TARGETS[0];
   const [ra, dec] = fieldCentre(t);
-  return { source: 'l2', targetId: t.id, ra, dec, label: t.name, dets: TARGET_DETS[t.id] ?? ALL, seq: 'epoch', op: 'image', hi: null };
+  return { source: 'l2', targetId: t.id, ra, dec, label: t.name, dets: TARGET_DETS[t.id] ?? ALL, seq: 'epoch', op: 'image', hi: null, liveRequested: false };
 }
 
 function coordView(ra: number, dec: number, label?: string): Partial<View> {
@@ -69,6 +70,7 @@ function coordView(ra: number, dec: number, label?: string): Partial<View> {
 
 const DEFAULT: View = {
   source: 'l2',
+  liveRequested: false,
   targetId: 'barnard',
   ra: 0,
   dec: 0,
@@ -118,7 +120,8 @@ if (t && TARGETS.some((x) => x.id === t)) v = { ...v, ...targetView(t) };
   const dec = Number(q.get('dec'));
   if (q.has('ra') && q.has('dec') && Number.isFinite(ra) && Number.isFinite(dec) && ra >= 0 && ra < 360 && Math.abs(dec) <= 90) v = { ...v, ...coordView(ra, dec, q.get('name') ?? undefined) };
   if (q.get('src') === 'sky') v = { ...v, source: 'sky', targetId: v.targetId };
-if (q.get('live') === '1') v = { ...v, source: 'l2' };
+v.liveRequested = q.get('live') !== '0';
+if (q.get('live') === '1') v = { ...v, source: v.source };
   const fov = Number(q.get('fov'));
   if (fov > 0) {
     if (v.source === 'l2') v.fovL2 = FOV_L2.reduce((a, b) => (Math.abs(b - fov) < Math.abs(a - fov) ? b : a));
@@ -185,6 +188,7 @@ export function toQuery(v: View): string {
   if (ov !== 'track') q.set('ov', ov);
   if (v.source === 'l2' && v.targetId) q.set('target', v.targetId);
 if (v.targetId?.startsWith('live-')) q.set('live', '1');
+q.set('live', v.liveRequested ? '1' : '0');
 return q.toString();
 }
 
@@ -213,21 +217,23 @@ export function useView() {
     async (text: string): Promise<{ ok: boolean; msg: string }> => {
       const input = text.trim();
       if (!input) return { ok: false, msg: 'Enter coordinates or an object name.' };
-      const c = parseCoords(input);
-      if (c) {
-        set(coordView(c.ra, c.dec));
-        return { ok: true, msg: '' };
-      }
-      const id = matchTarget(input);
-      if (id) {
-        set(targetView(id));
-        return { ok: true, msg: '' };
-      }
-      const r = await resolveName(input);
-      if (r) {
-        set(coordView(r.ra, r.dec, input));
-        return { ok: true, msg: '' };
-      }
+const c = parseCoords(input);
+if (c) {
+  const bundled = !!fieldFor(c.ra, c.dec);
+  set({ ...coordView(c.ra, c.dec), liveRequested: !bundled });
+  return { ok: true, msg: '' };
+}
+const id = matchTarget(input);
+if (id) {
+  set({ ...targetView(id), liveRequested: false });
+  return { ok: true, msg: '' };
+}
+const r = await resolveName(input);
+if (r) {
+  const bundled = !!fieldFor(r.ra, r.dec);
+  set({ ...coordView(r.ra, r.dec, input), liveRequested: !bundled });
+  return { ok: true, msg: '' };
+}
       return { ok: false, msg: `Could not resolve “${input}”. The name service may be unreachable. Try coordinates, like 17h57m47s +04d46m05s.` };
     },
     [set],

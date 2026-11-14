@@ -421,7 +421,7 @@ Endpoints used:
 - `https://irsa.ipac.caltech.edu/SIA` (SIA2, VOTable)
 - `https://irsa.ipac.caltech.edu/ibe/data/spherex/...fits?center=ra,dec&size=px`
 
-Because IRSA does not send CORS headers, live mode uses a pass-through proxy (`netlify/functions/irsa-proxy.js`) that only forwards requests and adds CORS headers; it performs no processing and is gated by `VITE_USE_IRSA_PROXY` / `VITE_IRSA_PROXY_URL`.
+Because IRSA does not send CORS headers, live mode uses a pass-through proxy (`netlify/functions/irsa-proxy.js`) that only forwards requests and adds CORS headers; it performs no processing and is gated by `VITE_USE_IRSA_PROXY` / `VITE_IRSA_PROXY_URL`. The single-file `dist/index.html` build has no server and cannot reach IRSA without network access and this proxy.
 
 Limits: coverage depends on the current IRSA SPHEREx release; positions with no frames return a plain-language "no coverage" message. New SPHEREx releases appear automatically—no rebuild is needed because queries run at view time.
 

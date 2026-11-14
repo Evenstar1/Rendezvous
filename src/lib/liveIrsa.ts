@@ -105,6 +105,14 @@ function buildPack(id: string, ra: number, dec: number, n: number, scale: number
 
 const cache = new Map<string, Promise<LiveResult>>();
 
+export async function countLiveFrames(ra: number, dec: number, signal?: AbortSignal): Promise<number> {
+  const adql = framesAdql(ra, dec);
+  const res = await irsaFetch(tapUrl(adql, 'csv'), { signal });
+  if (!res.ok) throw new Error(`IRSA TAP returned HTTP ${res.status}.`);
+  const text = await res.text();
+  return parseFramesCsv(text).length;
+}
+
 export function loadLivePack(
   ra: number,
   dec: number,

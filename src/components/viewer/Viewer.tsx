@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fmtDec, fmtRA } from '../../lib/coords';
 import { buildSkyShots } from '../../lib/hips';
-import { loadLivePack } from '../../lib/liveIrsa';
+import { countLiveFrames, loadLivePack } from '../../lib/liveIrsa';
 import { fetchSimbadField, ingestLocalFiles } from '../../lib/fitsWorkbench';
 import { DETECTORS, buildShots, fieldFor, loadPack, photometry, registerPack, targetAt, type GaiaSrc, type Pack, type Phot, type Shot } from '../../lib/packs';
 import { findMovers } from '../../lib/science';
@@ -143,8 +143,11 @@ const [liveDone, setLiveDone] = useState(0);
 const [liveTotal, setLiveTotal] = useState(0);
 const [liveError, setLiveError] = useState<string | null>(null);
 const [liveCancel, setLiveCancel] = useState<AbortController | null>(null);
+const [livePrompt, setLivePrompt] = useState<{ count: number; mb: number } | null>(null);
 const liveStartedRef = useRef<string | null>(null);
 const liveFovRef = useRef(view.fovL2);
+const liveRunIdRef = useRef(0);
+const liveAbortRef = useRef<AbortController | null>(null);
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(!reduced);
   const [visible, setVisible] = useState(true);
@@ -198,40 +201,66 @@ const liveFovRef = useRef(view.fovL2);
   }, [l2, view.targetId]);
 
   // All-sky HiPS
-const runLive = useCallback(async (fov = view.fovL2) => {
+const runLive = useCallback(async (fov = view.fovL2, force = false) => {
+    liveAbortRef.current?.abort();
     const ac = new AbortController();
+    liveAbortRef.current = ac;
+    const runId = ++liveRunIdRef.current;
     setLiveCancel(ac);
     setLiveLoading(true);
     setLiveError(null);
     setLiveDone(0);
     setLiveTotal(0);
+    setLivePrompt(null);
     liveFovRef.current = fov;
+    let loadedAny = false;
     try {
+      if (!force) {
+        const count = await countLiveFrames(view.ra, view.dec, ac.signal);
+        if (runId !== liveRunIdRef.current) return;
+        if (count > 48) {
+          setLivePrompt({ count, mb: Math.round(count * 4.1) });
+          setLiveLoading(false);
+          setLiveCancel(null);
+          return;
+        }
+      }
       const { pack } = await loadLivePack(view.ra, view.dec, fov, {
         signal: ac.signal,
         label: view.label,
         onProgress: (done, total, p) => {
+          if (runId !== liveRunIdRef.current) return;
           setLiveDone(done);
           setLiveTotal(total);
           if (p) {
+            loadedAny = true;
             setLivePack(p);
             setPack(p);
+            if (view.source !== 'l2') set({ source: 'l2', targetId: p.id, ra: view.ra, dec: view.dec, label: p.target.name, fovL2: fov, hi: null });
           }
         },
       });
-      if (ac.signal.aborted) return;
+      if (runId !== liveRunIdRef.current || ac.signal.aborted) return;
       setLivePack(pack);
       setPack(pack);
       registerPack(pack);
       onLoadPack(pack);
       set({ source: 'l2', targetId: pack.id, ra: view.ra, dec: view.dec, label: pack.target.name, fovL2: fov, hi: null });
     } catch (err) {
-      if (!ac.signal.aborted) setLiveError(err instanceof Error ? err.message : 'Live SPHEREx fetch failed.');
+      if (runId !== liveRunIdRef.current || ac.signal.aborted) return;
+      const msg = err instanceof Error ? err.message : 'Live SPHEREx fetch failed.';
+      if (/TAP returned HTTP/i.test(msg)) setLiveError('IRSA is unreachable or returned an error. HiPS preview remains available.');
+      else if (/No SPHEREx coverage/i.test(msg)) setLiveError('No SPHEREx coverage at this position in the current release.');
+      else if (/none could be processed/i.test(msg)) setLiveError('SPHEREx frames were found, but the FITS cutouts could not be read (malformed or partial download).');
+      else setLiveError(msg);
+      if (!loadedAny) set({ source: 'sky' });
     } finally {
-      setLiveLoading(false);
-      setLiveCancel(null);
+      if (runId === liveRunIdRef.current) {
+        setLiveLoading(false);
+        setLiveCancel(null);
+      }
     }
-  }, [view.ra, view.dec, view.fovL2, view.label, set, onLoadPack]);
+  }, [view.ra, view.dec, view.fovL2, view.label, view.source, set, onLoadPack]);
 
   const skyGrid = useMemo<Grid>(() => ({ ra: view.ra, dec: view.dec, n: SKY_N, scale: (view.fovSky * 60) / SKY_N }), [view.ra, view.dec, view.fovSky]);
   useEffect(() => {
@@ -278,7 +307,7 @@ const runLive = useCallback(async (fov = view.fovL2) => {
   useEffect(() => {
     const q = new URLSearchParams(window.location.search || window.location.hash.replace(/^#/, ''));
     const key = `${view.ra.toFixed(5)}|${view.dec.toFixed(5)}|${view.fovL2}`;
-    if (q.get('live') === '1' && !liveLoading && liveStartedRef.current !== key) {
+    if ((view.liveRequested || q.get('live') === '1') && !liveLoading && liveStartedRef.current !== key) {
       liveStartedRef.current = key;
       void runLive(view.fovL2);
     }
@@ -373,11 +402,11 @@ const runLive = useCallback(async (fov = view.fovL2) => {
     : sky.status;
   const statusText = l2
     ? activePack
-      ? 'No exposures in the selected detector bands. Enable more bands.'
+      ? (livePack && livePack.id === activePack.id ? 'SPHEREx live' : 'No exposures in the selected detector bands. Enable more bands.')
       : liveLoading
-        ? `Fetching live SPHEREx frames from IRSA: ${liveDone} / ${liveTotal || '?'}`
+        ? `HiPS preview while SPHEREx loads: ${liveDone} / ${liveTotal || '?'}`
         : liveError
-          ? liveError
+          ? `${liveError} HiPS preview remains visible.`
           : packErr
             ? 'The bundled snapshot could not be unpacked in this browser.'
             : 'Unpacking SPHEREx Level-2 exposures.'
@@ -471,14 +500,26 @@ const runLive = useCallback(async (fov = view.fovL2) => {
               <span className="micro hidden text-ink/65 sm:inline">⌘K actions</span>
             </div>
             {fitsMsg && <p role="status" className="mt-2 text-xs text-signal">{fitsMsg}</p>}
-            {!hasSnapshot && (
+            {(!hasSnapshot || liveLoading || livePrompt || liveError) && (
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <button type="button" onClick={() => runLive(view.fovL2)} disabled={liveLoading} className="micro min-h-10 border border-ink/25 px-3 text-ink/75 transition-colors hover:border-ink hover:bg-ink hover:text-black disabled:opacity-50">
-                  {liveLoading ? `Loading SPHEREx ${liveDone}/${liveTotal || '?'}` : 'Load SPHEREx data (live)'}
-                </button>
-                {liveCancel && (
-                  <button type="button" onClick={() => liveCancel.abort()} className="micro min-h-10 border border-ink/25 px-3 text-ink/75 transition-colors hover:border-ink hover:bg-ink hover:text-black">
+                {livePrompt && (
+                  <span className="text-xs text-ink/75">
+                    {livePrompt.count} images found, about {livePrompt.mb} MB. Load anyway?
+                  </span>
+                )}
+                {(livePrompt || (!hasSnapshot && !liveLoading)) && (
+                  <button type="button" onClick={() => { setLivePrompt(null); void runLive(view.fovL2, true); }} disabled={liveLoading} className="micro min-h-10 border border-ink/25 px-3 text-ink/75 transition-colors hover:border-ink hover:bg-ink hover:text-black disabled:opacity-50">
+                    {livePrompt ? 'Load anyway' : 'Load SPHEREx data (live)'}
+                  </button>
+                )}
+                {liveLoading && (
+                  <button type="button" onClick={() => liveCancel?.abort()} className="micro min-h-10 border border-ink/25 px-3 text-ink/75 transition-colors hover:border-ink hover:bg-ink hover:text-black">
                     Cancel
+                  </button>
+                )}
+                {liveError && (
+                  <button type="button" onClick={() => void runLive(view.fovL2, true)} className="micro min-h-10 border border-ink/25 px-3 text-ink/75 transition-colors hover:border-ink hover:bg-ink hover:text-black">
+                    Retry
                   </button>
                 )}
                 {liveError && <p role="status" className="text-xs text-signal">{liveError}</p>}
