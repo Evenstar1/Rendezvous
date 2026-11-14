@@ -8,7 +8,8 @@ import { Nav } from './components/Nav';
 import { Targets } from './components/Targets';
 import { Viewer } from './components/viewer/Viewer';
 import { useAllPacks } from './lib/usePacks';
-import { Atlas, AtlasMap } from './components/Atlas';
+import { Atlas } from './components/Atlas';
+import { SkyPreview } from './components/SkyPreview';
 import { DESTINATIONS } from './data/destinations';
 import { formatCatalogCoords } from './lib/atlas';
 import { decimalYear, positionAtEpoch } from './lib/atlas';
@@ -20,7 +21,6 @@ function Site() {
   const [guide, setGuide] = useState(false);
   const [palette, setPalette] = useState(false);
   const [atlas, setAtlas] = useState(false);
-  const [teaserMapOk, setTeaserMapOk] = useState(true);
   const active = view.source === 'l2' ? view.targetId : null;
 
   const launchDestination = useCallback(async (dest: any, blind: boolean) => {
@@ -69,22 +69,17 @@ function Site() {
       <Nav onGuide={() => setGuide(true)} onPalette={() => setPalette(true)} onAtlas={() => setAtlas(true)} />
       <main>
         <Hero acquire={acquire} onTarget={selectTarget} activeId={active} packs={packs} onGuide={() => setGuide(true)} onAtlas={() => setAtlas(true)} />
-        <section id="atlas-teaser" className="wrap py-16">
+<section id="atlas-teaser" className="wrap py-16">
           <p className="eyebrow text-ink/70">Where should I point it?</p>
-          <div className={`mt-6 grid gap-6 ${teaserMapOk ? 'lg:grid-cols-[2fr_3fr]' : ''}`}>
-            {teaserMapOk && (
-              <button type="button" onClick={() => setAtlas(true)} className="block w-full text-left" aria-label="Open the sky atlas">
-                <AtlasMap expedition={null} aspectRatio={2} interactive={false} onReady={setTeaserMapOk} />
-                <span className="micro mt-2 block text-ink/60">Open full atlas →</span>
-              </button>
-            )}
-            <div className={teaserMapOk ? 'grid grid-cols-3 gap-3' : 'grid gap-3 sm:grid-cols-3'}>
+          <div className="mt-6 grid gap-6">
+            <SkyPreview onOpen={() => setAtlas(true)} />
+            <div className="grid gap-3 sm:grid-cols-3">
               {['Proxima Centauri', 'Mira (omicron Ceti)', 'South Ecliptic Pole'].map((name) => {
                 const dest = DESTINATIONS.find((d) => d.name === name);
                 if (!dest) return null;
                 const coords = formatCatalogCoords(dest.ra, dest.dec);
-  return (
-                  <button key={dest.id} type="button" onClick={() => launchDestination(dest, false)} className="flex h-full min-h-[7rem] flex-col border border-ink/20 bg-panel2 p-4 text-left transition-colors hover:border-cyan">
+                return (
+                  <button key={dest.id} type="button" onClick={() => launchDestination(dest, false)} className="flex min-h-[6.5rem] flex-col border border-ink/20 bg-panel2 p-4 text-left transition-colors hover:border-cyan">
                     <p className="micro text-cyan">{dest.name}</p>
                     <p className="mt-2 line-clamp-2 text-sm text-ink/75">{dest.note}</p>
                     <p className="mt-2 font-mono text-[0.6875rem] text-ink/55">J2000 {coords.sex}</p>

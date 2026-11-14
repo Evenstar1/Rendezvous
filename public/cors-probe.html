@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>IRSA CORS Probe</title>
+<style>
+body { font-family: monospace; background: #0b1020; color: #e8ecf4; padding: 16px; }
+button { margin: 4px 0; padding: 8px 12px; }
+pre { white-space: pre-wrap; border: 1px solid #334; padding: 12px; }
+</style>
+</head>
+<body>
+<h1>IRSA CORS Probe</h1>
+<p>Open the browser console, click Run, then paste the full console output.</p>
+<button id="run">Run probe</button>
+<pre id="out"></pre>
+<script>
+const IRSA = 'https://irsa.ipac.caltech.edu';
+const RA = 133.795129;
+const DEC = -7.245147;
+const adql = "SELECT a.uri, p.time_bounds_lower, p.energy_bandpassname, p.obsid FROM spherex.artifact a JOIN spherex.plane p ON a.planeid = p.planeid WHERE 1 = CONTAINS(POINT('ICRS', " + RA.toFixed(6) + ", " + DEC.toFixed(6) + "), p.poly) ORDER BY p.time_bounds_lower";
+const tapUrl = IRSA + '/TAP/sync?QUERY=' + encodeURIComponent(adql) + '&FORMAT=csv';
+const cutoutUrl = IRSA + '/ibe/data/spherex/dr1/level2/2026W19_2A/l2b-v27-2026-245/3/level2_2026W19_2A_0568_1D3_spx_l2b-v27-2026-245.fits?center=' + RA.toFixed(6) + ',' + DEC.toFixed(6) + '&size=80px';
+
+function describe(resp, body) {
+  return {
+    status: resp ? resp.status : 'no response',
+    ok: resp ? resp.ok : false,
+    acao: resp ? (resp.headers.get('access-control-allow-origin') || '(absent)') : '(absent)',
+    acam: resp ? (resp.headers.get('access-control-allow-methods') || '(absent)') : '(absent)',
+    acah: resp ? (resp.headers.get('access-control-allow-headers') || '(absent)') : '(absent)',
+    contentType: resp ? (resp.headers.get('content-type') || '(absent)') : '(absent)',
+    bodyReadable: body !== null,
+    bodyBytes: body ? body.length : 0,
+  };
+}
+
+async function probe(label, url, options) {
+  const t0 = performance.now();
+  let resp = null;
+  let body = null;
+  let error = null;
+  try {
+    resp = await fetch(url, options);
+    try { body = await resp.text(); } catch (e) { body = null; error = 'body read failed: ' + e; }
+  } catch (e) {
+    error = 'fetch threw: ' + (e && e.message ? e.message : e);
+  }
+  const ms = Math.round(performance.now() - t0);
+  const result = { label, url, ms, ...describe(resp, body), error };
+  console.log(JSON.stringify(result));
+  if (body) console.log(label + ' body preview:', body.slice(0, 200).replace(/\s+/g, ' '));
+  return result;
+}
+
+window.addEventListener('load', () => document.getElementById('run').click());
+document.getElementById('run').addEventListener('click', async () => {
+  const out = document.getElementById('out');
+  out.textContent = 'Running... see console.';
+  const results = [];
+  results.push(await probe('TAP GET', tapUrl, { method: 'GET' }));
+  try {
+    const body = 'QUERY=' + encodeURIComponent(adql) + '&FORMAT=csv';
+    results.push(await probe('TAP POST', IRSA + '/TAP/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    }));
+  } catch (e) {
+    results.push({ label: 'TAP POST', error: String(e) });
+  }
+  results.push(await probe('OPTIONS preflight', tapUrl, { method: 'OPTIONS' }));
+  results.push(await probe('Cutout GET', cutoutUrl, { method: 'GET' }));
+  out.textContent = JSON.stringify(results, null, 2);
+});
+</script>
+</body>
+</html>
+HTML

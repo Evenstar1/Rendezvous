@@ -259,6 +259,10 @@ const reducedMotion = typeof window !== 'undefined' && !!window.matchMedia && wi
       }),
     ];
 
+    console.log('ATLASMAP_DEBUG', 'canvas=', canvas.width, canvas.height, 'destinations=', DESTINATIONS.length, 'beacons=', beacons.length, 'first=', beacons.slice(0, 3).map((b) => {
+      const p = project(b.ra, b.dec);
+      return { id: b.id, x: p.x, y: p.y };
+    }));
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
       const dpr = Math.min(2, window.devicePixelRatio || 1);
