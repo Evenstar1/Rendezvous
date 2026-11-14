@@ -606,7 +606,12 @@ export function MoversChart({
                   >
                     {/* Velocity vector from center */}
                     <line x1={cx} y1={cy} x2={mx} y2={my} stroke={dotColor} strokeWidth={isHover ? 2 : 1} strokeOpacity={isHover ? 0.9 : 0.35} strokeDasharray={m.match ? undefined : '2 3'} />
-                    {isHover && <circle cx={mx} cy={my} r={dotR + 5} fill="none" stroke={dotColor} strokeWidth="1.5" strokeOpacity="0.8" className="animate-ping" />}
+                    {isHover && (
+                      <circle cx={mx} cy={my} r={dotR + 5} fill="none" stroke={dotColor} strokeWidth="1.5" strokeOpacity="0.8">
+                        <animate attributeName="r" values={`${dotR + 3};${dotR + 9};${dotR + 3}`} dur="1.2s" repeatCount="indefinite" />
+                        <animate attributeName="stroke-opacity" values="0.8;0.2;0.8" dur="1.2s" repeatCount="indefinite" />
+                      </circle>
+                    )}
                     <circle cx={mx} cy={my} r={dotR} fill={dotColor} stroke="#000" strokeWidth="1.5" />
                     <text x={mx + 8} y={my + 4} fontSize="10" fontWeight="700" fill={dotColor} className="num">
                       {m.id}
