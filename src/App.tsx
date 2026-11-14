@@ -1,3 +1,4 @@
+import { flushSync } from 'react-dom';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CommandPalette } from './components/CommandPalette';
 import { DataSection, Footer } from './components/DataSection';
@@ -40,7 +41,7 @@ function Site() {
     } catch {
       /* ignore */
     }
-    setAtlas(false);
+    flushSync(() => setAtlas(false));
   }, [acquire]);
 
   useEffect(() => {
@@ -49,7 +50,7 @@ function Site() {
       const typing = !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
       if (e.key.toLowerCase() === 'd' && !e.metaKey && !e.ctrlKey && !e.altKey && !typing) {
         e.preventDefault();
-        setAtlas(true);
+        flushSync(() => setAtlas(true));
       } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setPalette((p) => !p);
@@ -67,14 +68,14 @@ function Site() {
       <a href="#viewer" className="sr-only z-[60] bg-ink px-4 py-3 text-sm font-semibold text-black focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
         Skip to the viewer
       </a>
-      <Nav onGuide={() => setGuide(true)} onPalette={() => setPalette(true)} onAtlas={() => setAtlas(true)} />
+      <Nav onGuide={() => setGuide(true)} onPalette={() => setPalette(true)} onAtlas={() => flushSync(() => setAtlas(true))} />
       <main>
-        <Hero acquire={acquire} onTarget={selectTarget} activeId={active} packs={packs} onGuide={() => setGuide(true)} onAtlas={() => setAtlas(true)} />
+        <Hero acquire={acquire} onTarget={selectTarget} activeId={active} packs={packs} onGuide={() => setGuide(true)} onAtlas={() => flushSync(() => setAtlas(true))} />
 <section id="atlas-teaser" className="wrap py-16">
           <p className="eyebrow text-ink/70">Where should I point it?</p>
           <div className="mt-6 grid items-center gap-6 lg:grid-cols-[minmax(240px,360px)_1fr]">
             <div className="mx-auto w-full max-w-[360px] min-w-[240px]">
-              <SkyPreview onOpen={() => setAtlas(true)} />
+              <SkyPreview onOpen={() => flushSync(() => setAtlas(true))} />
               <span className="micro mt-2 block text-ink/60">Open full atlas →</span>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
@@ -93,11 +94,11 @@ function Site() {
               })}
             </div>
           </div>
-          <button type="button" onClick={() => setAtlas(true)} className="micro mt-6 border border-cyan/50 bg-cyan/10 px-4 py-2 text-cyan transition-colors hover:border-cyan hover:bg-cyan hover:text-black">
+          <button type="button" onClick={() => flushSync(() => setAtlas(true))} className="micro mt-6 border border-cyan/50 bg-cyan/10 px-4 py-2 text-cyan transition-colors hover:border-cyan hover:bg-cyan hover:text-black">
             See all {DESTINATIONS.length} destinations →
           </button>
         </section>
-        <Viewer view={view} set={set} toL2={toL2} toSky={toSky} onLoadPack={loadCustomPack} onGuide={() => setGuide(true)} onAtlas={() => setAtlas(true)} />
+        <Viewer view={view} set={set} toL2={toL2} toSky={toSky} onLoadPack={loadCustomPack} onGuide={() => setGuide(true)} onAtlas={() => flushSync(() => setAtlas(true))} />
 
         <Targets packs={packs} activeId={active} onSelect={selectTarget} />
         <Instrument />
@@ -105,7 +106,7 @@ function Site() {
       </main>
       <Footer />
       <Guide open={guide} onClose={() => setGuide(false)} />
-      <Atlas open={atlas} onClose={() => setAtlas(false)} onLaunch={launchDestination} />
+      <Atlas open={atlas} onClose={() => flushSync(() => setAtlas(false))} onLaunch={launchDestination} />
       <CommandPalette
         open={palette}
         onClose={() => setPalette(false)}
@@ -115,7 +116,7 @@ function Site() {
         toL2={toL2}
         toSky={toSky}
         onGuide={() => setGuide(true)}
-        onAtlas={() => setAtlas(true)}
+onAtlas={() => flushSync(() => setAtlas(true))}
         onPng={() => window.dispatchEvent(new Event('rv:png'))}
       />
     </>

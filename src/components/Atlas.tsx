@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { DESTINATIONS, EXPEDITIONS, type Destination } from '../data/destinations';
 import { decimalYear, formatCatalogCoords, formatLightTravel, positionAtEpoch } from '../lib/atlas';
 import { TARGETS, fieldCentre } from '../data/targets';
+import { SkyPreview } from './SkyPreview';
 import { cn } from '../utils/cn';
 
 const EXPEDITION_COLOR: Record<number, string> = {
@@ -111,13 +112,7 @@ const [surpriseSpin, setSurpriseSpin] = useState(false);
         </header>
 
         <div className="border-b border-ink/15 px-4 py-3 sm:px-6">
-          <AtlasMap expedition={expedition} height={224} interactive onSelect={(id) => {
-            const dest = DESTINATIONS.find((d) => d.id === id);
-            if (dest) {
-              setExpedition(dest.expedition);
-              document.getElementById(`dest-${dest.id}`)?.scrollIntoView({ behavior: 'smooth', inline: 'center' });
-            }
-          }} />
+          <SkyPreview interactive={false} />
           <p className="mt-2 text-xs text-ink/60">Hover a beacon. Gold dashed line = ecliptic; red glows = deep fields.</p>
         </div>
 {listView ? (
@@ -258,11 +253,6 @@ const reducedMotion = typeof window !== 'undefined' && !!window.matchMedia && wi
         return { id: t.id, name: t.name, ra, dec, expedition: 0, bundled: true, pm: null as number | null };
       }),
     ];
-
-    console.log('ATLASMAP_DEBUG', 'canvas=', canvas.width, canvas.height, 'destinations=', DESTINATIONS.length, 'beacons=', beacons.length, 'first=', beacons.slice(0, 3).map((b) => {
-      const p = project(b.ra, b.dec);
-      return { id: b.id, x: p.x, y: p.y };
-    }));
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
       const dpr = Math.min(2, window.devicePixelRatio || 1);
