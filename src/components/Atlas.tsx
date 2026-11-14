@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { DESTINATIONS, EXPEDITIONS, type Destination } from '../data/destinations';
 import { decimalYear, formatCatalogCoords, formatLightTravel, positionAtEpoch } from '../lib/atlas';
+import { TARGETS, fieldCentre } from '../data/targets';
 import { cn } from '../utils/cn';
 
 const EXPEDITION_COLOR: Record<number, string> = {
@@ -23,6 +24,9 @@ export function Atlas({ open, onClose, onLaunch }: Props) {
   const [flipped, setFlipped] = useState<Record<string, boolean>>({});
   const [blind, setBlind] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+const [hoverId, setHoverId] = useState<string | null>(null);
+const canvasRef = useRef<HTMLCanvasElement>(null);
+const reducedMotion = typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const now = decimalYear();
 
   const filtered = useMemo(
@@ -59,6 +63,186 @@ export function Atlas({ open, onClose, onLaunch }: Props) {
     }
   };
 
+useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !open) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    let raf = 0;
+    const beacons = [
+      ...DESTINATIONS.filter((d) => (expedition ? d.expedition === expedition : true)).map((d) => ({ id: d.id, name: d.name, ra: d.ra, dec: d.dec, expedition: d.expedition, bundled: false, pm: d.totalPm })),
+      ...TARGETS.map((t) => {
+        const [ra, dec] = fieldCentre(t);
+        return { id: t.id, name: t.name, ra, dec, expedition: 0, bundled: true, pm: null as number | null };
+      }),
+    ];
+
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+      canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+    };
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(canvas);
+
+    const project = (ra: number, dec: number) => {
+      const W = canvas.width;
+      const H = canvas.height;
+      let lon = ((ra - 180) * Math.PI) / 180;
+      const lat = (dec * Math.PI) / 180;
+      let theta = lat;
+      for (let i = 0; i < 6; i++) theta = (Math.PI * Math.sin(lat) - Math.sin(2 * theta)) / 2;
+      // Newton correction
+      for (let i = 0; i < 6; i++) {
+        const f = 2 * theta + Math.sin(2 * theta) - Math.PI * Math.sin(lat);
+        const fp = 2 + 2 * Math.cos(2 * theta);
+        theta -= f / fp;
+      }
+      const x = (2 * Math.sqrt(2) / Math.PI) * lon * Math.cos(theta);
+      const y = Math.sqrt(2) * Math.sin(theta);
+      return { x: W / 2 + x * (W / 3.35), y: H / 2 - y * (H / 1.85) };
+    };
+
+    const draw = (time: number) => {
+      const W = canvas.width;
+      const H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+      const bg = ctx.createLinearGradient(0, 0, 0, H);
+      bg.addColorStop(0, '#050814');
+      bg.addColorStop(1, '#0b1020');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
+
+      // Milky Way band approximation
+      ctx.save();
+      ctx.globalAlpha = 0.16;
+      ctx.strokeStyle = '#c9d6ff';
+      ctx.lineWidth = H * 0.18;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (let i = 0; i <= 180; i++) {
+        const ra = (i / 180) * 360;
+        const dec = 28 * Math.sin(((ra - 120) * Math.PI) / 180);
+        const p = project(ra, dec);
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      // Ecliptic
+      ctx.save();
+      ctx.setLineDash([6, 6]);
+      ctx.strokeStyle = 'rgba(242,214,96,0.7)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let i = 0; i <= 360; i++) {
+        const lam = (i * Math.PI) / 180;
+        const eps = (23.439 * Math.PI) / 180;
+        const ra = (Math.atan2(Math.sin(lam) * Math.cos(eps), Math.cos(lam)) * 180) / Math.PI;
+        const dec = (Math.asin(Math.sin(lam) * Math.sin(eps)) * 180) / Math.PI;
+        const p = project((ra + 360) % 360, dec);
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      // Ecliptic poles glow
+      for (const pole of [{ ra: 270, dec: 66.56 }, { ra: 90, dec: -66.56 }]) {
+        const p = project(pole.ra, pole.dec);
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 42);
+        g.addColorStop(0, 'rgba(255,92,77,0.55)');
+        g.addColorStop(1, 'rgba(255,92,77,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(p.x - 42, p.y - 42, 84, 84);
+      }
+
+      beacons.forEach((b, idx) => {
+        const p = project(b.ra, b.dec);
+        const pulse = reducedMotion ? 0 : Math.sin(time / 450 + idx) * 1.8;
+        const color = b.bundled ? '#ffffff' : EXPEDITION_COLOR[b.expedition] || '#7aa8ff';
+        ctx.strokeStyle = color;
+        ctx.lineWidth = b.bundled ? 2 : 1.5;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 6 + pulse, 0, Math.PI * 2);
+        if (b.bundled) ctx.stroke();
+        else {
+          ctx.setLineDash([3, 3]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        if (b.pm && b.pm > 2) {
+          const len = Math.min(28, b.pm * 3);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p.x + len, p.y - len * 0.35);
+          ctx.stroke();
+        }
+        if (hoverId === b.id) {
+          ctx.fillStyle = 'rgba(255,255,255,0.9)';
+          ctx.font = '12px monospace';
+          ctx.fillText(b.name, p.x + 8, p.y - 8);
+        }
+      });
+
+      if (!reducedMotion) raf = requestAnimationFrame(draw);
+    };
+    raf = requestAnimationFrame(draw);
+
+    const onMove = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+      let best: string | null = null;
+      let bestD = 14;
+      for (const b of beacons) {
+        const p = project(b.ra, b.dec);
+        const d = Math.hypot(p.x - x, p.y - y);
+        if (d < bestD) {
+          bestD = d;
+          best = b.id;
+        }
+      }
+      setHoverId(best);
+    };
+    const onClick = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+      for (const b of beacons) {
+        const p = project(b.ra, b.dec);
+        if (Math.hypot(p.x - x, p.y - y) < 12) {
+          const dest = DESTINATIONS.find((d) => d.id === b.id);
+          if (dest) {
+            setExpedition(dest.expedition);
+            const el = document.getElementById(`dest-${dest.id}`);
+            el?.scrollIntoView({ behavior: 'smooth', inline: 'center' });
+          }
+          break;
+        }
+      }
+    };
+    canvas.addEventListener('mousemove', onMove);
+    canvas.addEventListener('click', onClick);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      canvas.removeEventListener('mousemove', onMove);
+      canvas.removeEventListener('click', onClick);
+    };
+  }, [open, expedition, hoverId]);
+
   if (!open) return null;
 
   return (
@@ -91,7 +275,13 @@ export function Atlas({ open, onClose, onLaunch }: Props) {
           </div>
         </header>
 
-        <div className="flex-1 overflow-x-auto overflow-y-hidden px-4 py-6 sm:px-6">
+        <div className="border-b border-ink/15 px-4 py-3 sm:px-6">
+          <canvas ref={canvasRef} className="h-52 w-full rounded-sm border border-ink/15 bg-black/60 sm:h-64" />
+          <p className="mt-2 text-xs text-ink/60">
+            {hoverId ? DESTINATIONS.find((d) => d.id === hoverId)?.name ?? 'Bundled field' : 'Hover a beacon. Gold dashed line = ecliptic; red glows = deep fields.'}
+          </p>
+        </div>
+<div className="flex-1 overflow-x-auto overflow-y-hidden px-4 py-6 sm:px-6">
           <div className="flex h-full gap-4">
             {filtered.map((dest) => {
               const pos = positionAtEpoch(dest.ra, dest.dec, dest.pmra, dest.pmdec, 2000, now);
