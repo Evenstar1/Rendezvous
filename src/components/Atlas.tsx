@@ -156,7 +156,7 @@ const [surpriseSpin, setSurpriseSpin] = useState(false);
               const isFlipped = !!flipped[dest.id];
               const accent = EXPEDITION_COLOR[dest.expedition];
               return (
-                <article key={dest.id} className="relative h-full w-[22rem] shrink-0 [perspective:1200px]">
+                <article key={dest.id} className="relative h-[clamp(18rem,45vh,26rem)] w-[min(22rem,85vw)] shrink-0 [perspective:1200px]">
                   <div className={cn('relative h-full w-full transition-transform duration-300 [transform-style:preserve-3d]', isFlipped && '[transform:rotateY(180deg)]')}>
                     <div className="absolute inset-0 flex flex-col overflow-hidden border border-ink/20 bg-panel2 p-4 [backface-visibility:hidden]">
                       <div className="flex items-start justify-between gap-3">
