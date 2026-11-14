@@ -8,7 +8,8 @@ import { Nav } from './components/Nav';
 import { Targets } from './components/Targets';
 import { Viewer } from './components/viewer/Viewer';
 import { useAllPacks } from './lib/usePacks';
-import { Atlas } from './components/Atlas';
+import { Atlas, AtlasMap } from './components/Atlas';
+import { DESTINATIONS } from './data/destinations';
 import { decimalYear, positionAtEpoch } from './lib/atlas';
 import { isEmbed, useView } from './state';
 
@@ -43,7 +44,10 @@ function Site() {
     const key = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       const typing = !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      if (e.key.toLowerCase() === 'd' && !e.metaKey && !e.ctrlKey && !e.altKey && !typing) {
+        e.preventDefault();
+        setAtlas(true);
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setPalette((p) => !p);
       } else if (!typing && e.key === '?' && !guide) {
@@ -62,8 +66,31 @@ function Site() {
       </a>
       <Nav onGuide={() => setGuide(true)} onPalette={() => setPalette(true)} onAtlas={() => setAtlas(true)} />
       <main>
-        <Hero acquire={acquire} onTarget={selectTarget} activeId={active} packs={packs} onGuide={() => setGuide(true)} />
-        <Viewer view={view} set={set} acquire={acquire} toL2={toL2} toSky={toSky} onLoadPack={loadCustomPack} onGuide={() => setGuide(true)} />
+        <Hero acquire={acquire} onTarget={selectTarget} activeId={active} packs={packs} onGuide={() => setGuide(true)} onAtlas={() => setAtlas(true)} />
+        <section id="atlas-teaser" className="wrap py-16">
+          <p className="eyebrow text-ink/70">Where should I point it?</p>
+          <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+            <AtlasMap expedition={null} height={220} interactive={false} />
+            <div className="grid gap-3 sm:grid-cols-3">
+              {['Proxima Centauri', 'Mira (omicron Ceti)', 'South Ecliptic Pole'].map((name) => {
+                const dest = DESTINATIONS.find((d) => d.name === name);
+                if (!dest) return null;
+                return (
+                  <button key={dest.id} type="button" onClick={() => launchDestination(dest, false)} className="border border-ink/20 bg-panel2 p-4 text-left transition-colors hover:border-cyan">
+                    <p className="micro text-cyan">{dest.name}</p>
+                    <p className="mt-2 text-sm text-ink/75">{dest.note}</p>
+                    <p className="mt-3 text-xs text-ink/60">Launch →</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <button type="button" onClick={() => setAtlas(true)} className="micro mt-6 border border-cyan/50 bg-cyan/10 px-4 py-2 text-cyan transition-colors hover:border-cyan hover:bg-cyan hover:text-black">
+            See all {DESTINATIONS.length} destinations →
+          </button>
+        </section>
+        <Viewer view={view} set={set} acquire={acquire} toL2={toL2} toSky={toSky} onLoadPack={loadCustomPack} onGuide={() => setGuide(true)} onAtlas={() => setAtlas(true)} />
+
         <Targets packs={packs} activeId={active} onSelect={selectTarget} />
         <Instrument />
         <DataSection view={view} packs={packs} onLoadPack={loadCustomPack} />
@@ -80,6 +107,7 @@ function Site() {
         toL2={toL2}
         toSky={toSky}
         onGuide={() => setGuide(true)}
+        onAtlas={() => setAtlas(true)}
         onPng={() => window.dispatchEvent(new Event('rv:png'))}
       />
     </>

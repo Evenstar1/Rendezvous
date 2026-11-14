@@ -30,6 +30,7 @@ interface Props {
   toSky: () => void;
   onLoadPack: (p: Pack) => void;
   onGuide: () => void;
+  onAtlas?: () => void;
   embed?: boolean;
 }
 
@@ -128,7 +129,7 @@ function Transport({ shots, i, playing, onToggle, onSeek, fps, onFps }: { shots:
   );
 }
 
-export function Viewer({ view, set, acquire, toL2, toSky, onLoadPack, onGuide, embed }: Props) {
+export function Viewer({ view, set, acquire, toL2, toSky, onLoadPack, onGuide, onAtlas, embed }: Props) {
   const sectionRef = useRef<HTMLElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const reduced = useMemo(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches, []);
@@ -482,7 +483,8 @@ const runLive = useCallback(async (fov = view.fovL2, force = false) => {
                 e.target.value = '';
               }}
             />
-            <AcquireBar onAcquire={acquire} compact />
+            <AcquireBar onAcquire={acquire} compact onDestinations={onAtlas} />
+            {onAtlas && <button type="button" onClick={onAtlas} className="micro min-h-10 border border-cyan/40 px-3 text-cyan transition-colors hover:border-cyan hover:bg-cyan hover:text-black">Destinations</button>}
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <Seg
                 className="w-52"
@@ -523,6 +525,7 @@ const runLive = useCallback(async (fov = view.fovL2, force = false) => {
                   </button>
                 )}
                 {liveError && <p role="status" className="text-xs text-signal">{liveError}</p>}
+                {liveError && onAtlas && <button type="button" onClick={onAtlas} className="micro min-h-10 border border-cyan/40 px-3 text-cyan transition-colors hover:border-cyan hover:bg-cyan hover:text-black">Try a destination →</button>}
               </div>
             )}
           </div>

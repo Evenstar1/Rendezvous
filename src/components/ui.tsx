@@ -113,7 +113,7 @@ export function SectionHead({ index, kicker, title, children, className, accent 
 }
 
 /** Coordinate / name entry used in the hero and the viewer header. */
-export function AcquireBar({ onAcquire, initial = '', compact, onDone }: { onAcquire: (text: string) => Promise<{ ok: boolean; msg: string }>; initial?: string; compact?: boolean; onDone?: () => void }) {
+export function AcquireBar({ onAcquire, initial = '', compact, onDone, onDestinations }: { onAcquire: (text: string) => Promise<{ ok: boolean; msg: string }>; initial?: string; compact?: boolean; onDone?: () => void; onDestinations?: () => void }) {
   const id = useId();
   const [text, setText] = useState(initial);
   const [busy, setBusy] = useState(false);
@@ -155,6 +155,11 @@ export function AcquireBar({ onAcquire, initial = '', compact, onDone }: { onAcq
       </form>
       <p id={`${id}-msg`} role="status" aria-live="polite" className={cn('text-sm text-signal', msg ? 'mt-2' : 'sr-only')}>
         {msg}
+        {msg && onDestinations && (
+          <button type="button" onClick={onDestinations} className="ml-2 underline text-cyan hover:text-ink">
+            Try a destination →
+          </button>
+        )}
       </p>
     </div>
   );

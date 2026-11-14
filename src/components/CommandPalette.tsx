@@ -26,12 +26,13 @@ interface Props {
   toSky: () => void;
   onGuide: () => void;
   onPng: () => void;
+  onAtlas: () => void;
 }
 
 const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 const tab = (name: string) => window.dispatchEvent(new CustomEvent('rv:tab', { detail: name }));
 
-export function CommandPalette({ open, onClose, view, set, selectTarget, toL2, toSky, onGuide, onPng }: Props) {
+export function CommandPalette({ open, onClose, view, set, selectTarget, toL2, toSky, onGuide, onPng, onAtlas }: Props) {
   const [q, setQ] = useState('');
   const [i, setI] = useState(0);
   const [copied, setCopied] = useState('');
@@ -74,6 +75,7 @@ export function CommandPalette({ open, onClose, view, set, selectTarget, toL2, t
       { id: 'tab-log', group: 'Science', label: 'Open discovery notebook', run: () => tab('log') },
       { id: 'apcorr', group: 'Science', label: `${view.apCorr ? 'Disable' : 'Enable'} PSF encircled-energy aperture correction`, run: () => set({ apCorr: !view.apCorr }) },
       { id: 'guide', group: 'Science', label: 'Open the science guide & equations', hint: 'Beginner to researcher', run: onGuide },
+      { id: 'atlas', group: 'Go to', label: 'Open destinations', hint: 'Browse the sky atlas', keys: 'D', run: onAtlas },
       { id: 'png', group: 'Share', label: 'Download current frame as PNG', run: onPng },
       {
         id: 'copy',
@@ -92,7 +94,7 @@ export function CommandPalette({ open, onClose, view, set, selectTarget, toL2, t
       { id: 'go-data', group: 'Go to', label: 'Go to data & embed', run: () => scrollTo('data') },
     ];
     return list;
-  }, [view, set, selectTarget, toL2, toSky, onGuide, onPng, ov]);
+  }, [view, set, selectTarget, toL2, toSky, onGuide, onPng, onAtlas, ov]);
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();

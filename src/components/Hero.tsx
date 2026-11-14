@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import heroImg from '../assets/hero-raw.png';
+import { DESTINATIONS } from '../data/destinations';
 import { TARGETS } from '../data/targets';
 import { buildShots, loadPack, type Pack } from '../lib/packs';
 import { paint } from '../lib/render';
@@ -89,9 +90,10 @@ interface Props {
   activeId: string | null;
   packs: Pack[] | null;
   onGuide: () => void;
+  onAtlas: () => void;
 }
 
-export function Hero({ acquire, onTarget, activeId, packs, onGuide }: Props) {
+export function Hero({ acquire, onTarget, activeId, packs, onGuide, onAtlas }: Props) {
   const frames = packs ? packs.reduce((s, p) => s + p.frames.length, 0) : 0;
   const stats: [string, string][] = [
     ['102', 'Spectral channels'],
@@ -146,9 +148,21 @@ export function Hero({ acquire, onTarget, activeId, packs, onGuide }: Props) {
                   {t.name}
                 </button>
               ))}
+              <button
+                type="button"
+                onClick={onAtlas}
+                className="micro min-h-9 border border-cyan/60 bg-cyan/10 px-3 text-cyan transition-colors hover:border-cyan hover:bg-cyan hover:text-black"
+                aria-label={`Browse ${DESTINATIONS.length} more destinations`}
+              >
+                + {DESTINATIONS.length} more destinations →
+              </button>
             </div>
             <button type="button" onClick={onGuide} className="micro mt-5 flex min-h-9 items-center gap-2 text-ink/75 transition-colors hover:text-ink">
               First visit? Read the 60-second science guide
+              <Arrow />
+            </button>
+            <button type="button" onClick={onAtlas} className="micro mt-2 flex min-h-9 items-center gap-2 text-cyan transition-colors hover:text-ink">
+              Not sure where to look? Browse the sky atlas
               <Arrow />
             </button>
           </div>

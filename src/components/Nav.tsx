@@ -1,3 +1,4 @@
+import { DESTINATIONS } from '../data/destinations';
 import { useEffect, useState } from 'react';
 import { jumpTo } from '../lib/usePacks';
 import { cn } from '../utils/cn';
@@ -5,7 +6,7 @@ import { Wordmark } from './ui';
 
 const LINKS: [string, string][] = [
   ['Viewer', 'viewer'],
-  ['Targets', 'targets'],
+  ['Test Targets', 'targets'],
   ['Instrument', 'instrument'],
   ['Data', 'data'],
 ];
@@ -13,6 +14,20 @@ const LINKS: [string, string][] = [
 export function Nav({ onGuide, onPalette, onAtlas }: { onGuide: () => void; onPalette: () => void; onAtlas: () => void }) {
   const [solid, setSolid] = useState(false);
   const [open, setOpen] = useState(false);
+  const [nudge, setNudge] = useState(false);
+  const reduced = typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  useEffect(() => {
+    let seen = false;
+    try { seen = window.localStorage.getItem('rv:atlas-nudge-seen') === '1'; } catch { seen = true; }
+    if (seen || reduced) return;
+    setNudge(true);
+    const t = window.setTimeout(() => {
+      setNudge(false);
+      try { window.localStorage.setItem('rv:atlas-nudge-seen', '1'); } catch { /* ignore */ }
+    }, 4000);
+    return () => clearTimeout(t);
+  }, [reduced]);
 
   useEffect(() => {
     const on = () => setSolid(window.scrollY > 40);
@@ -54,8 +69,10 @@ export function Nav({ onGuide, onPalette, onAtlas }: { onGuide: () => void; onPa
         </nav>
 
         <div className="flex items-center gap-2">
-          <button type="button" onClick={onAtlas} className="micro hidden min-h-10 items-center border border-ink/25 px-3 text-ink/70 transition-colors hover:border-ink hover:text-ink md:flex">
+          <button type="button" onClick={onAtlas} title={`Browse ${DESTINATIONS.length} places to point SPHEREx (D)`} aria-label={`Browse ${DESTINATIONS.length} places to point SPHEREx`} className={cn('micro relative hidden min-h-10 items-center gap-2 border border-cyan/50 bg-cyan/10 px-3 text-cyan transition-colors hover:border-cyan hover:bg-cyan hover:text-black md:flex focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan', nudge && 'animate-pulse')}>
+              <span className="h-1.5 w-1.5 rounded-full bg-cyan" aria-hidden="true" />
               Destinations
+              <span className="num border border-cyan/40 px-1.5 py-0.5 text-[0.6875rem]">{DESTINATIONS.length}</span>
             </button>
             <button type="button" onClick={onPalette} className="micro hidden min-h-10 items-center gap-2 border border-ink/25 px-3 text-ink/70 transition-colors hover:border-ink hover:text-ink md:flex" aria-label="Open command palette">
             Search
@@ -91,9 +108,10 @@ export function Nav({ onGuide, onPalette, onAtlas }: { onGuide: () => void; onPa
               {label}
             </a>
           ))}
-          <button type="button" onClick={() => { setOpen(false); onGuide(); }} className="micro flex min-h-12 items-center gap-3 border-b border-ink/12 text-left text-ink/80">
-            Science guide
-          </button>
+<button type="button" onClick={() => { setOpen(false); onAtlas(); }} className="micro flex min-h-12 items-center gap-3 border-b border-ink/12 text-left text-cyan">
+              Destinations
+              <span className="num text-xs text-cyan/70">{DESTINATIONS.length}</span>
+            </button>
           <p className="micro flex items-center gap-2 pt-6 text-ink/70"><span className="h-1.5 w-1.5 bg-cyan" aria-hidden="true" />Rendezvous — mission console</p>
         </nav>
       </div>
