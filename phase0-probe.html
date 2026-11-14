@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Phase 0 – IRSA SPHEREx Browser Feasibility Probe</title>
+<style>
+  body { font-family: 'Segoe UI', system-ui, sans-serif; max-width: 960px; margin: 2em auto; background: #0d1117; color: #c9d1d9; }
+  h1 { color: #58a6ff; font-size: 1.5em; }
+  h2 { color: #79c0ff; font-size: 1.15em; margin-top: 2em; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+  th, td { border: 1px solid #30363d; padding: 6px 10px; text-align: left; font-size: 0.9em; }
+  th { background: #161b22; }
+  .pass { color: #3fb950; font-weight: bold; }
+  .fail { color: #f85149; font-weight: bold; }
+  .warn { color: #d29922; font-weight: bold; }
+  #log { background: #161b22; padding: 1em; border-radius: 6px; font-family: monospace; font-size: 0.85em; white-space: pre-wrap; max-height: 500px; overflow-y: auto; }
+  button { background: #238636; color: #fff; border: none; padding: 10px 24px; border-radius: 6px; font-size: 1em; cursor: pointer; margin: 1em 0; }
+  button:hover { background: #2ea043; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .summary { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 1em; margin: 1em 0; }
+</style>
+</head>
+<body>
+<h1>🛰️ Phase 0 – IRSA SPHEREx Browser Feasibility Probe</h1>
+<p>Target: <strong>WISE 0855−0714</strong> (RA=133.795129°, Dec=−7.245147°)</p>
+<p>This page tests whether the three critical IRSA APIs can be called directly from a browser (CORS).</p>
+
+<button id="run" onclick="runAll()">▶ Run All Tests</button>
+<div id="results"></div>
+<h2>Live Log</h2>
+<div id="log"></div>
+
+<script>
+const RA = 133.795129;
+const DEC = -7.245147;
+const IRSA = 'https://irsa.ipac.caltech.edu';
+const results = [];
+
+function log(msg) {
+  const el = document.getElementById('log');
+  el.textContent += msg + '\n';
+  el.scrollTop = el.scrollHeight;
+  console.log(msg);
+}
+
+function renderResults() {
+  let html = '<h2>Results Summary</h2><table><tr><th>Test</th><th>URL (truncated)</th><th>Status</th><th>CORS</th><th>Size</th><th>Time</th><th>Notes</th></tr>';
+  for (const r of results) {
+    const corsClass = r.cors === 'Yes' ? 'pass' : r.cors === 'No' ? 'fail' : 'warn';
+    const statusClass = r.httpStatus >= 200 && r.httpStatus < 300 ? 'pass' : 'fail';
+    html += `<tr>
+      <td>${r.name}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.url}">${r.url.slice(0, 80)}…</td>
+      <td class="${statusClass}">${r.httpStatus}</td>
+      <td class="${corsClass}">${r.cors}</td>
+      <td>${r.size}</td>
+      <td>${r.time}</td>
+      <td>${r.notes}</td>
+    </tr>`;
+  }
+  html += '</table>';
+  
+  // Decision
+  const allCors = results.every(r => r.cors === 'Yes');
+  const someCors = results.some(r => r.cors === 'Yes');
+  html += '<div class="summary">';
+  if (allCors) {
+    html += '<p class="pass">✅ Path A: All endpoints support CORS. Direct browser access is possible. No proxy needed.</p>';
+  } else if (someCors) {
+    html += '<p class="warn">⚠️ Partial CORS. Some endpoints work, others need a proxy (Path B).</p>';
+    html += '<p>Blocked endpoints: ' + results.filter(r => r.cors !== 'Yes').map(r => r.name).join(', ') + '</p>';
+  } else {
+    html += '<p class="fail">❌ Path B/C: No endpoints support CORS from the browser. A proxy will be needed.</p>';
+  }
+  html += '</div>';
+  document.getElementById('results').innerHTML = html;
+}
+
+async function testFetch(name, url, opts = {}) {
+  const t0 = performance.now();
+  const result = { name, url, httpStatus: '-', cors: 'Unknown', size: '-', time: '-', notes: '' };
+  try {
+    log(`[${name}] Fetching: ${url.slice(0, 120)}…`);
+    const resp = await fetch(url, { signal: AbortSignal.timeout(30000), ...opts });
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(2) + 's';
+    result.time = elapsed;
+    result.httpStatus = resp.status;
+    
+    // If we got here, CORS allowed the request
+    result.cors = 'Yes';
+    
+    // Check for CORS headers explicitly
+    const acao = resp.headers.get('Access-Control-Allow-Origin');
+    log(`  Access-Control-Allow-Origin: ${acao ?? '(not visible to JS — but request succeeded)'}`);
+    
+    return { resp, result, elapsed };
+  } catch (err) {
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(2) + 's';
+    result.time = elapsed;
+    if (err.name === 'TypeError' && err.message.includes('Failed to fetch')) {
+      result.cors = 'No';
+      result.notes = 'CORS blocked (or network error)';
+      log(`  ❌ CORS BLOCKED: ${err.message}`);
+    } else if (err.name === 'TimeoutError') {
+      result.cors = 'Timeout';
+      result.notes = 'Request timed out after 30s';
+      log(`  ⏱️ TIMEOUT`);
+    } else {
+      result.cors = 'Error';
+      result.notes = err.message;
+      log(`  ❌ Error: ${err.message}`);
+    }
+    return { resp: null, result, elapsed };
+  }
+}
+
+async function test1_TAP() {
+  log('\n═══ TEST 1: TAP Query (discover SPHEREx tables) ═══');
+  
+  // First, discover available SPHEREx tables via TAP_SCHEMA
+  const schemaAdql = "SELECT table_name, description FROM TAP_SCHEMA.tables WHERE schema_name LIKE '%spherex%' OR table_name LIKE '%spherex%'";
+  const schemaUrl = `${IRSA}/TAP/sync?QUERY=${encodeURIComponent(schemaAdql)}&FORMAT=csv`;
+  const { resp: schemaResp, result: schemaResult } = await testFetch('TAP: TAP_SCHEMA tables', schemaUrl);
+  if (schemaResp) {
+    const text = await schemaResp.text();
+    schemaResult.size = (text.length / 1024).toFixed(1) + ' kB';
+    log(`  Response (${text.length} bytes):\n${text.slice(0, 2000)}`);
+    schemaResult.notes = text.split('\n').length - 1 + ' rows';
+  }
+  results.push(schemaResult);
+  
+  // Now the actual frame query the app uses
+  const framesAdql = `SELECT a.uri, p.time_bounds_lower, p.energy_bandpassname, p.obsid FROM spherex.artifact a JOIN spherex.plane p ON a.planeid = p.planeid WHERE 1 = CONTAINS(POINT('ICRS', ${RA.toFixed(6)}, ${DEC.toFixed(6)}), p.poly) ORDER BY p.time_bounds_lower`;
+  const framesUrl = `${IRSA}/TAP/sync?QUERY=${encodeURIComponent(framesAdql)}&FORMAT=csv`;
+  const { resp: framesResp, result: framesResult } = await testFetch('TAP: SPHEREx frames query', framesUrl);
+  if (framesResp) {
+    const text = await framesResp.text();
+    framesResult.size = (text.length / 1024).toFixed(1) + ' kB';
+    const lines = text.trim().split('\n');
+    log(`  Response: ${lines.length} lines (${text.length} bytes)`);
+    log(`  Header: ${lines[0]}`);
+    if (lines.length > 1) {
+      log(`  First row: ${lines[1]}`);
+      log(`  Last row:  ${lines[lines.length - 1]}`);
+    }
+    framesResult.notes = `${lines.length - 1} images found`;
+    // Save first URI for cutout test
+    if (lines.length > 1) {
+      window._firstUri = lines[1].split(',')[0];
+      window._frameLines = lines;
+      log(`  ✅ First URI for cutout test: ${window._firstUri}`);
+    }
+  }
+  results.push(framesResult);
+
+  // Also try obscore
+  log('\n--- Also probing ivoa.obscore for SPHEREx ---');
+  const obscoreAdql = `SELECT TOP 5 obs_collection, obs_id, access_url, t_min, t_max, s_ra, s_dec, dataproduct_type FROM ivoa.obscore WHERE obs_collection LIKE '%spherex%' AND 1=CONTAINS(POINT('ICRS', ${RA.toFixed(6)}, ${DEC.toFixed(6)}), s_region)`;
+  const obscoreUrl = `${IRSA}/TAP/sync?QUERY=${encodeURIComponent(obscoreAdql)}&FORMAT=csv`;
+  const { resp: obscoreResp, result: obscoreResult } = await testFetch('TAP: obscore query', obscoreUrl);
+  if (obscoreResp) {
+    const text = await obscoreResp.text();
+    obscoreResult.size = (text.length / 1024).toFixed(1) + ' kB';
+    log(`  Response:\n${text.slice(0, 3000)}`);
+    obscoreResult.notes = text.trim().split('\n').length - 1 + ' rows';
+  }
+  results.push(obscoreResult);
+}
+
+async function test2_SIA() {
+  log('\n═══ TEST 2: SIA2 Query ═══');
+  
+  // Try various collection names
+  for (const collection of ['spherex_dr1', 'spherex_qr3', 'spherex_qr']) {
+    const siaUrl = `${IRSA}/SIA?COLLECTION=${collection}&POS=CIRCLE+${RA}+${DEC}+0.05&RESPONSEFORMAT=votable`;
+    const { resp, result } = await testFetch(`SIA2: ${collection}`, siaUrl);
+    if (resp) {
+      const text = await resp.text();
+      result.size = (text.length / 1024).toFixed(1) + ' kB';
+      // Check if it returned results or error
+      const accessUrlCount = (text.match(/access_url/gi) || []).length;
+      log(`  Response (${text.length} bytes, access_url mentions: ${accessUrlCount}):`);
+      log(`  ${text.slice(0, 1500)}`);
+      result.notes = `access_url refs: ${accessUrlCount}`;
+    }
+    results.push(result);
+  }
+}
+
+async function test3_Cutout() {
+  log('\n═══ TEST 3: FITS Cutout Fetch ═══');
+  
+  let uri = window._firstUri;
+  if (!uri) {
+    log('  ⚠️ No URI from TAP test. Using a known URI pattern...');
+    // Fallback — try a known URI pattern from the ingest cache
+    uri = null;
+  }
+  
+  if (!uri) {
+    const result = { name: 'Cutout: FITS fetch', url: 'N/A', httpStatus: '-', cors: 'Skipped', size: '-', time: '-', notes: 'No URI available from TAP query' };
+    results.push(result);
+    return;
+  }
+  
+  const cutoutUrl = `${IRSA}/${uri}?center=${RA.toFixed(6)},${DEC.toFixed(6)}&size=80px`;
+  log(`  Cutout URL: ${cutoutUrl}`);
+  
+  // Test 3a: Full fetch as ArrayBuffer
+  const { resp, result } = await testFetch('Cutout: FITS ArrayBuffer', cutoutUrl);
+  if (resp) {
+    const buf = await resp.arrayBuffer();
+    result.size = (buf.byteLength / 1024).toFixed(1) + ' kB';
+    log(`  ✅ Received ${buf.byteLength} bytes of FITS data`);
+    
+    // Quick FITS header peek
+    const u8 = new Uint8Array(buf);
+    let headerStr = '';
+    for (let i = 0; i < Math.min(2880, u8.length); i++) headerStr += String.fromCharCode(u8[i]);
+    const simpleMatch = headerStr.match(/SIMPLE\s*=\s*T/);
+    const extMatch = headerStr.match(/NAXIS\d?\s*=\s*\d+/g);
+    log(`  FITS validation: SIMPLE=T present: ${!!simpleMatch}`);
+    log(`  NAXIS keywords: ${extMatch ? extMatch.join(', ') : 'none'}`);
+    
+    // Try to parse HDUs
+    try {
+      const hdus = parseFitsHeaders(u8);
+      log(`  HDUs found: ${hdus.map(h => h.name + (h.complete ? '✓' : '…')).join(', ')}`);
+      result.notes = `${(buf.byteLength/1024).toFixed(0)} kB, ${hdus.length} HDUs: ${hdus.map(h=>h.name).join(',')}`;
+    } catch(e) {
+      log(`  HDU parse error: ${e.message}`);
+      result.notes = `${(buf.byteLength/1024).toFixed(0)} kB, parse error`;
+    }
+  }
+  results.push(result);
+
+  // Test 3b: Range request (prefix fetch — the technique the app uses)
+  log('\n--- Testing Range/prefix fetch (first 200 kB) ---');
+  const { resp: rangeResp, result: rangeResult } = await testFetch('Cutout: prefix fetch (200kB)', cutoutUrl);
+  if (rangeResp && rangeResp.body) {
+    const reader = rangeResp.body.getReader();
+    let got = 0;
+    const chunks = [];
+    const LIMIT = 200000;
+    while (got < LIMIT) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      got += value.length;
+    }
+    reader.cancel().catch(() => {});
+    const combined = new Uint8Array(got);
+    let offset = 0;
+    for (const c of chunks) { combined.set(c, offset); offset += c.length; }
+    rangeResult.size = (got / 1024).toFixed(1) + ' kB (streamed)';
+    log(`  ✅ Streamed ${got} bytes (cancelled after ${LIMIT})`);
+    
+    try {
+      const hdus = parseFitsHeaders(combined);
+      log(`  HDUs in prefix: ${hdus.map(h => h.name + (h.complete ? '✓' : '…')).join(', ')}`);
+      rangeResult.notes = `${hdus.filter(h=>h.complete).length} complete HDUs`;
+    } catch(e) {
+      log(`  HDU parse: ${e.message}`);
+    }
+  }
+  results.push(rangeResult);
+}
+
+// Minimal FITS parser (same logic as the app's spherex.ts parseFits)
+function parseFitsHeaders(u8) {
+  const BLOCK = 2880;
+  const hdus = [];
+  let o = 0;
+  while (o + BLOCK <= u8.length) {
+    const header = {};
+    let end = false;
+    while (!end) {
+      if (o + BLOCK > u8.length) return hdus;
+      for (let i = 0; i < 36; i++) {
+        let card = '';
+        const s = o + i * 80;
+        for (let k = 0; k < 80; k++) card += String.fromCharCode(u8[s + k]);
+        if (card.startsWith('END') && card.slice(3).trim() === '') { end = true; break; }
+        if (card[8] === '=') {
+          const key = card.slice(0, 8).trim();
+          let rest = card.slice(9).trim();
+          if (rest.startsWith("'")) {
+            let str = '', ci = 1;
+            while (ci < rest.length) {
+              if (rest[ci] === "'") { if (rest[ci+1] === "'") { str += "'"; ci += 2; continue; } break; }
+              str += rest[ci++];
+            }
+            header[key] = str.trimEnd();
+          } else {
+            const v = rest.split('/')[0].trim();
+            if (v === 'T') header[key] = true;
+            else if (v === 'F') header[key] = false;
+            else { const n = Number(v); header[key] = isNaN(n) ? v : n; }
+          }
+        }
+      }
+      o += BLOCK;
+    }
+    const bitpix = Number(header.BITPIX || 8);
+    const naxis = Number(header.NAXIS || 0);
+    let n = naxis ? 1 : 0;
+    for (let i = 1; i <= naxis; i++) n *= Number(header['NAXIS' + i] || 0);
+    const bytes = (Math.abs(bitpix) / 8) * (n + Number(header.PCOUNT || 0)) * Number(header.GCOUNT || 1);
+    const name = String(header.EXTNAME || (hdus.length === 0 ? 'PRIMARY' : ''));
+    hdus.push({ name, header, dataOffset: o, dataBytes: bytes, complete: o + bytes <= u8.length });
+    o += Math.ceil(bytes / BLOCK) * BLOCK;
+  }
+  return hdus;
+}
+
+async function runAll() {
+  const btn = document.getElementById('run');
+  btn.disabled = true;
+  btn.textContent = '⏳ Running…';
+  document.getElementById('log').textContent = '';
+  document.getElementById('results').innerHTML = '';
+  results.length = 0;
+
+  log('Phase 0 Feasibility Probe — ' + new Date().toISOString());
+  log(`Target: WISE 0855−0714 (RA=${RA}, Dec=${DEC})`);
+  log(`Browser: ${navigator.userAgent}`);
+  log(`Origin: ${window.location.origin}`);
+
+  await test1_TAP();
+  await test2_SIA();
+  await test3_Cutout();
+  
+  log('\n═══ ALL TESTS COMPLETE ═══');
+  renderResults();
+  
+  btn.disabled = false;
+  btn.textContent = '▶ Run Again';
+}
+</script>
+</body>
+</html>
