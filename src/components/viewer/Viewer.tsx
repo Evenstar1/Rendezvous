@@ -268,6 +268,14 @@ const runLive = useCallback(async (fov = view.fovL2) => {
   }, [l2, skyGrid, view.skyMode, view.surveys, view.channel]);
 
   useEffect(() => {
+    const blind = new URLSearchParams(window.location.search || window.location.hash.replace(/^#/, '')).get('blind') === '1';
+    if (blind && view.label === 'Blind Mission' && playing) {
+      const name = window.sessionStorage.getItem('rv-blind-name');
+      if (name) set({ label: name });
+    }
+  }, [playing, view.label, set]);
+
+  useEffect(() => {
     const q = new URLSearchParams(window.location.search || window.location.hash.replace(/^#/, ''));
     const key = `${view.ra.toFixed(5)}|${view.dec.toFixed(5)}|${view.fovL2}`;
     if (q.get('live') === '1' && !liveLoading && liveStartedRef.current !== key) {

@@ -23,6 +23,10 @@ function Site() {
   const launchDestination = useCallback(async (dest: any, blind: boolean) => {
     const pos = positionAtEpoch(dest.ra, dest.dec, dest.pmra, dest.pmdec, 2000, decimalYear());
     await acquire(`${pos.ra.toFixed(6)} ${pos.dec.toFixed(6)}`);
+    if (blind) {
+      window.sessionStorage.setItem('rv-blind-name', dest.name);
+      set({ label: 'Blind Mission' });
+    }
     const q = new URLSearchParams(window.location.search || window.location.hash.replace(/^#/, ''));
     q.set('live', '1');
     if (blind) q.set('blind', '1');

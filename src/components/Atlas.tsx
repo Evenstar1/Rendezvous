@@ -24,6 +24,8 @@ export function Atlas({ open, onClose, onLaunch }: Props) {
   const [flipped, setFlipped] = useState<Record<string, boolean>>({});
   const [blind, setBlind] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+const [listView, setListView] = useState(false);
+const [surpriseSpin, setSurpriseSpin] = useState(false);
 const [hoverId, setHoverId] = useState<string | null>(null);
 const canvasRef = useRef<HTMLCanvasElement>(null);
 const reducedMotion = typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -258,6 +260,21 @@ useEffect(() => {
               <button type="button" onClick={() => setBlind((b) => !b)} className="micro min-h-10 border border-ink/25 px-3 text-ink/75 transition-colors hover:border-ink hover:text-ink">
                 Blind Mission: {blind ? 'On' : 'Off'}
               </button>
+              <button type="button" onClick={() => setListView((v) => !v)} className="micro min-h-10 border border-ink/25 px-3 text-ink/75 transition-colors hover:border-ink hover:text-ink">
+                {listView ? 'Cards' : 'List'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const pick = DESTINATIONS[Math.floor(Math.random() * DESTINATIONS.length)];
+                  setSurpriseSpin(true);
+                  setTimeout(() => setSurpriseSpin(false), 650);
+                  onLaunch(pick, blind);
+                }}
+                className={cn('micro min-h-10 border border-ink/25 px-3 text-ink/75 transition-colors hover:border-ink hover:text-ink', surpriseSpin && 'animate-spin')}
+              >
+                Surprise me
+              </button>
               <button type="button" onClick={onClose} className="micro min-h-10 border border-ink/25 px-3 text-ink/75 transition-colors hover:border-ink hover:text-ink">
                 Close
               </button>
@@ -281,8 +298,38 @@ useEffect(() => {
             {hoverId ? DESTINATIONS.find((d) => d.id === hoverId)?.name ?? 'Bundled field' : 'Hover a beacon. Gold dashed line = ecliptic; red glows = deep fields.'}
           </p>
         </div>
-<div className="flex-1 overflow-x-auto overflow-y-hidden px-4 py-6 sm:px-6">
-          <div className="flex h-full gap-4">
+{listView ? (
+          <div className="flex-1 overflow-auto px-4 py-6 sm:px-6">
+            <table className="w-full text-left text-sm">
+              <thead className="text-ink/65">
+                <tr>
+                  <th className="pb-2">Name</th>
+                  <th className="pb-2">Exp</th>
+                  <th className="pb-2">Coordinates</th>
+                  <th className="pb-2">Launch</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((dest) => {
+                  return (
+                    <tr key={dest.id} className="border-t border-ink/10">
+                      <td className="py-2">{blind ? 'Blind Mission' : dest.name}</td>
+                      <td className="py-2">{dest.expedition}</td>
+                      <td className="py-2 font-mono text-xs">{dest.ra.toFixed(4)}, {dest.dec.toFixed(4)}</td>
+                      <td className="py-2">
+                        <button type="button" onClick={() => onLaunch(dest, blind)} className="micro border border-ink/25 px-2 py-1 text-ink/75 hover:border-ink hover:text-ink">
+                          Launch
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="flex-1 overflow-x-auto overflow-y-hidden px-4 py-6 sm:px-6">
+            <div className="flex h-full gap-4">
             {filtered.map((dest) => {
               const pos = positionAtEpoch(dest.ra, dest.dec, dest.pmra, dest.pmdec, 2000, now);
               const coords = formatCatalogCoords(dest.ra, dest.dec);
@@ -351,6 +398,7 @@ useEffect(() => {
             })}
           </div>
         </div>
+        )}
       </div>
     </div>
   );
