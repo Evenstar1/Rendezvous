@@ -407,6 +407,26 @@ The output is compiled directly into `dist/index.html`. Using `vite-plugin-singl
 
 ---
 
+## 6b. Live SPHEREx Mode (Any RA/Dec)
+
+Rendezvous can fetch real SPHEREx Level-2 frames for any position, not just the five bundled fields:
+
+1. Enter coordinates or a target name, then click **Load SPHEREx data (live)** (or open a URL with `?live=1`).
+2. The app queries IRSA TAP (`spherex.obscore` / `spherex.artifact` + `spherex.plane`) for every Level-2 image whose footprint contains the position.
+3. It requests a spatial cutout (`?center=ra,dec&size=...px`) for each frame, runs the same TAN-SIP reprojection, flag masking, zodiacal subtraction, co-add, difference, per-detector and photometry pipeline as the bundled fields.
+4. Frames are capped at 48 (stratified by detector) to keep downloads bounded; progress and cancel are shown in the viewer.
+
+Endpoints used:
+- `https://irsa.ipac.caltech.edu/TAP/sync` (ADQL, CSV)
+- `https://irsa.ipac.caltech.edu/SIA` (SIA2, VOTable)
+- `https://irsa.ipac.caltech.edu/ibe/data/spherex/...fits?center=ra,dec&size=px`
+
+Because IRSA does not send CORS headers, live mode uses a pass-through proxy (`netlify/functions/irsa-proxy.js`) that only forwards requests and adds CORS headers; it performs no processing and is gated by `VITE_USE_IRSA_PROXY` / `VITE_IRSA_PROXY_URL`.
+
+Limits: coverage depends on the current IRSA SPHEREx release; positions with no frames return a plain-language "no coverage" message. New SPHEREx releases appear automatically—no rebuild is needed because queries run at view time.
+
+---
+
 ## 7. Data Provenance & Mission Credits
 
 Rendezvous uses exclusively authentic, calibrated astronomical data. All external links and API connections strictly credit the missions, surveys, and space agencies that gathered the observations:

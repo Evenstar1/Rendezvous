@@ -112,8 +112,8 @@ function params(): URLSearchParams {
 function fromUrl(): View {
   let v: View = { ...DEFAULT };
   const q = params();
-  const t = q.get('t');
-  if (t && TARGETS.some((x) => x.id === t)) v = { ...v, ...targetView(t) };
+const t = q.get('target') ?? q.get('t');
+if (t && TARGETS.some((x) => x.id === t)) v = { ...v, ...targetView(t) };
   const ra = Number(q.get('ra'));
   const dec = Number(q.get('dec'));
   if (q.has('ra') && q.has('dec') && Number.isFinite(ra) && Number.isFinite(dec) && ra >= 0 && ra < 360 && Math.abs(dec) <= 90) v = { ...v, ...coordView(ra, dec, q.get('name') ?? undefined) };
@@ -182,7 +182,9 @@ export function toQuery(v: View): string {
   if (v.tools.movers) q.set('movers', '1');
   const ov = [v.ov.track && 'track', v.ov.gaia && 'gaia', v.ov.wise && 'wise', v.ov.flags && 'flags', !v.ov.reticle && 'noreticle'].filter(Boolean).join(',');
   if (ov !== 'track') q.set('ov', ov);
-  return q.toString();
+  if (v.source === 'l2' && v.targetId) q.set('target', v.targetId);
+if (v.targetId?.startsWith('live-')) q.set('live', '1');
+return q.toString();
 }
 
 export const isEmbed = () => params().get('embed') === '1';
@@ -231,7 +233,7 @@ export function useView() {
   );
 
   const toSky = useCallback(() => set({ source: 'sky', op: 'image', hi: null }), [set]);
-  const toL2 = useCallback(() => setView((v) => ({ ...v, ...coordView(v.ra, v.dec, v.label) })), []);
+  const toL2 = useCallback(() => setView((v) => (v.targetId?.startsWith('live-') ? { ...v, source: 'l2' } : { ...v, ...coordView(v.ra, v.dec, v.label) })), []);
   const loadCustomPack = useCallback(
     (pack: Pack) => {
       registerPack(pack);

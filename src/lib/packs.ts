@@ -128,7 +128,7 @@ async function inflate(b64: string): Promise<Uint8Array> {
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
-function groupEpochs(frames: Frame[]): number[][] {
+export function groupEpochs(frames: Frame[]): number[][] {
   const groups: number[][] = [];
   let cur: number[] = [];
   frames.forEach((f, i) => {

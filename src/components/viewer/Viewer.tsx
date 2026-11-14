@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fmtDec, fmtRA } from '../../lib/coords';
 import { buildSkyShots } from '../../lib/hips';
+import { loadLivePack } from '../../lib/liveIrsa';
 import { fetchSimbadField, ingestLocalFiles } from '../../lib/fitsWorkbench';
-import { DETECTORS, buildShots, fieldFor, loadPack, photometry, targetAt, type GaiaSrc, type Pack, type Phot, type Shot } from '../../lib/packs';
+import { DETECTORS, buildShots, fieldFor, loadPack, photometry, registerPack, targetAt, type GaiaSrc, type Pack, type Phot, type Shot } from '../../lib/packs';
 import { findMovers } from '../../lib/science';
 import { applyOp, autoHi, type Stretch } from '../../lib/render';
 import type { Grid } from '../../lib/spherex';
@@ -133,15 +134,23 @@ export function Viewer({ view, set, acquire, toL2, toSky, onLoadPack, onGuide, e
   const reduced = useMemo(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches, []);
   const [pack, setPack] = useState<Pack | null>(null);
   const [packErr, setPackErr] = useState(false);
-  const [sky, setSky] = useState<SkyState>({ shots: NO_SHOTS, status: 'loading', done: 0, total: 0 });
-  const [skyGaia, setSkyGaia] = useState<GaiaSrc[]>([]);
-  const [fitsMsg, setFitsMsg] = useState('');
+const [sky, setSky] = useState<SkyState>({ shots: NO_SHOTS, status: 'loading', done: 0, total: 0 });
+const [skyGaia, setSkyGaia] = useState<GaiaSrc[]>([]);
+const [fitsMsg, setFitsMsg] = useState('');
+const [livePack, setLivePack] = useState<Pack | null>(null);
+const [liveLoading, setLiveLoading] = useState(false);
+const [liveDone, setLiveDone] = useState(0);
+const [liveTotal, setLiveTotal] = useState(0);
+const [liveError, setLiveError] = useState<string | null>(null);
+const [liveCancel, setLiveCancel] = useState<AbortController | null>(null);
+const liveStartedRef = useRef<string | null>(null);
+const liveFovRef = useRef(view.fovL2);
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(!reduced);
   const [visible, setVisible] = useState(true);
   const [probe, setProbe] = useState<{ i: number; j: number } | null>(null);
   const l2 = view.source === 'l2';
-  const hasSnapshot = useMemo(() => !!fieldFor(view.ra, view.dec), [view.ra, view.dec, view.targetId]);
+  const hasSnapshot = useMemo(() => !!fieldFor(view.ra, view.dec) || (!!livePack && livePack.id === view.targetId), [view.ra, view.dec, view.targetId, livePack]);
 
   const handleFiles = async (fileList: FileList | File[]) => {
     const arr = Array.from(fileList);
@@ -176,7 +185,7 @@ export function Viewer({ view, set, acquire, toL2, toSky, onLoadPack, onGuide, e
   // Level-2 snapshot
   useEffect(() => {
     setProbe(null);
-    if (!l2 || !view.targetId) return;
+    if (!l2 || !view.targetId || view.targetId.startsWith('live-')) return;
     let alive = true;
     setPackErr(false);
     setPack((p) => (p && p.id === view.targetId ? p : null));
@@ -189,6 +198,41 @@ export function Viewer({ view, set, acquire, toL2, toSky, onLoadPack, onGuide, e
   }, [l2, view.targetId]);
 
   // All-sky HiPS
+const runLive = useCallback(async (fov = view.fovL2) => {
+    const ac = new AbortController();
+    setLiveCancel(ac);
+    setLiveLoading(true);
+    setLiveError(null);
+    setLiveDone(0);
+    setLiveTotal(0);
+    liveFovRef.current = fov;
+    try {
+      const { pack } = await loadLivePack(view.ra, view.dec, fov, {
+        signal: ac.signal,
+        label: view.label,
+        onProgress: (done, total, p) => {
+          setLiveDone(done);
+          setLiveTotal(total);
+          if (p) {
+            setLivePack(p);
+            setPack(p);
+          }
+        },
+      });
+      if (ac.signal.aborted) return;
+      setLivePack(pack);
+      setPack(pack);
+      registerPack(pack);
+      onLoadPack(pack);
+      set({ source: 'l2', targetId: pack.id, ra: view.ra, dec: view.dec, label: pack.target.name, fovL2: fov, hi: null });
+    } catch (err) {
+      if (!ac.signal.aborted) setLiveError(err instanceof Error ? err.message : 'Live SPHEREx fetch failed.');
+    } finally {
+      setLiveLoading(false);
+      setLiveCancel(null);
+    }
+  }, [view.ra, view.dec, view.fovL2, view.label, set, onLoadPack]);
+
   const skyGrid = useMemo<Grid>(() => ({ ra: view.ra, dec: view.dec, n: SKY_N, scale: (view.fovSky * 60) / SKY_N }), [view.ra, view.dec, view.fovSky]);
   useEffect(() => {
     setProbe(null);
@@ -223,7 +267,27 @@ export function Viewer({ view, set, acquire, toL2, toSky, onLoadPack, onGuide, e
     };
   }, [l2, skyGrid, view.skyMode, view.surveys, view.channel]);
 
-  const activePack = l2 && pack && pack.id === view.targetId ? pack : null;
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search || window.location.hash.replace(/^#/, ''));
+    const key = `${view.ra.toFixed(5)}|${view.dec.toFixed(5)}|${view.fovL2}`;
+    if (q.get('live') === '1' && !liveLoading && liveStartedRef.current !== key) {
+      liveStartedRef.current = key;
+      void runLive(view.fovL2);
+    }
+  }, [view.ra, view.dec, view.fovL2, liveLoading, runLive]);
+
+  useEffect(() => {
+    if (livePack && view.fovL2 !== liveFovRef.current && !liveLoading) {
+      liveFovRef.current = view.fovL2;
+      void runLive(view.fovL2);
+    }
+  }, [view.fovL2, livePack, liveLoading, runLive]);
+
+  const activePack = l2 && pack && pack.id === view.targetId
+    ? pack
+    : l2 && livePack && livePack.id === view.targetId
+      ? livePack
+      : null;
   const l2Shots = useMemo(() => (activePack ? buildShots(activePack, view.seq, view.dets) : NO_SHOTS), [activePack, view.seq, view.dets]);
   const shots = l2 ? l2Shots : sky.shots;
   const grid = l2 ? activePack?.grid : skyGrid;
@@ -288,13 +352,27 @@ export function Viewer({ view, set, acquire, toL2, toSky, onLoadPack, onGuide, e
     return () => window.removeEventListener('rv:png', h);
   }, [activePack, shot?.title]);
 
-  const status: 'ready' | 'loading' | 'error' = l2 ? (activePack ? (shots.length ? 'ready' : 'error') : packErr ? 'error' : 'loading') : sky.status;
+  const status: 'ready' | 'loading' | 'error' = l2
+    ? activePack
+      ? shots.length
+        ? 'ready'
+        : 'error'
+      : liveLoading
+        ? 'loading'
+        : liveError || packErr
+          ? 'error'
+          : 'loading'
+    : sky.status;
   const statusText = l2
     ? activePack
       ? 'No exposures in the selected detector bands. Enable more bands.'
-      : packErr
-        ? 'The bundled snapshot could not be unpacked in this browser.'
-        : 'Unpacking SPHEREx Level-2 exposures.'
+      : liveLoading
+        ? `Fetching live SPHEREx frames from IRSA: ${liveDone} / ${liveTotal || '?'}`
+        : liveError
+          ? liveError
+          : packErr
+            ? 'The bundled snapshot could not be unpacked in this browser.'
+            : 'Unpacking SPHEREx Level-2 exposures.'
     : sky.status === 'error'
       ? 'Could not pull HiPS tiles for this position from IRSA. Check your connection, or load one of the five mission targets: their data is on board and needs no network.'
       : `Pulling HiPS tiles from IRSA${sky.total ? `: layer ${Math.min(sky.total, sky.done + 1)} of ${sky.total}` : ''}.`;
@@ -385,6 +463,19 @@ export function Viewer({ view, set, acquire, toL2, toSky, onLoadPack, onGuide, e
               <span className="micro hidden text-ink/65 sm:inline">⌘K actions</span>
             </div>
             {fitsMsg && <p role="status" className="mt-2 text-xs text-signal">{fitsMsg}</p>}
+            {!hasSnapshot && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button type="button" onClick={() => runLive(view.fovL2)} disabled={liveLoading} className="micro min-h-10 border border-ink/25 px-3 text-ink/75 transition-colors hover:border-ink hover:bg-ink hover:text-black disabled:opacity-50">
+                  {liveLoading ? `Loading SPHEREx ${liveDone}/${liveTotal || '?'}` : 'Load SPHEREx data (live)'}
+                </button>
+                {liveCancel && (
+                  <button type="button" onClick={() => liveCancel.abort()} className="micro min-h-10 border border-ink/25 px-3 text-ink/75 transition-colors hover:border-ink hover:bg-ink hover:text-black">
+                    Cancel
+                  </button>
+                )}
+                {liveError && <p role="status" className="text-xs text-signal">{liveError}</p>}
+              </div>
+            )}
           </div>
         </div>
 
@@ -422,7 +513,7 @@ export function Viewer({ view, set, acquire, toL2, toSky, onLoadPack, onGuide, e
                     onKey={(k) => (k === 'toggle' ? setPlaying((p) => !p) : shots.length && setIdx((i + (k === 'next' ? 1 : shots.length - 1)) % shots.length))}
                     status={status}
                     statusText={statusText}
-                    progress={sky.total ? sky.done / sky.total : 0}
+                    progress={liveLoading ? (liveTotal ? liveDone / liveTotal : 0) : sky.total ? sky.done / sky.total : 0}
                     opLabel={opLabel}
                     showGrid={view.tools.grid}
                     measure={view.tools.measure}
