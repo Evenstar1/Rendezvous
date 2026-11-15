@@ -1,7 +1,8 @@
 # Rendezvous — SPHEREx Blink & Astrophysical Laboratory
 
 **2026 NASA Space Apps Challenge · Planet X and SPHEREx**  
-**Team Afterlight · Evenstar1** · [github.com/Evenstar1/Rendezvous](https://github.com/Evenstar1/Rendezvous)
+**Team Afterlight · Evenstar1 and Shreyash Sahare** · [github.com/Evenstar1/Rendezvous](https://github.com/Evenstar1/Rendezvous)
+**Site Link · [https://rendezvous-x.netlify.app](https://rendezvous-x.netlify.app/)**
 
 [![NASA Space Apps](https://img.shields.io/badge/NASA%20Space%20Apps-2026%20Challenge-0B3D91?style=for-the-badge&logo=nasa&logoColor=white)](https://www.spaceappschallenge.org/)
 [![SPHEREx Mission](https://img.shields.io/badge/Mission-NASA%20SPHEREx-blue?style=for-the-badge)](https://spherex.caltech.edu/)
