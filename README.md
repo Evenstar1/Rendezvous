@@ -437,8 +437,9 @@ Rendezvous uses exclusively authentic, calibrated astronomical data. All externa
 - **CDS Strasbourg**: HiPS hierarchical progressive survey tile access via Aladin / CDS servers, and astronomical name resolution via SIMBAD.
 - **Two Micron All Sky Survey (2MASS)**: Near-infrared $J$, $H$, and $K_s$ survey mosaics.
 - **Space Telescope Science Institute (STScI)**: Digitized Sky Survey (DSS2) photographic plate scans.
+- **AI / SI use disclosure**: Parts of the source code and documentation were drafted with generative AI tools, Claude, Gemini and Beam 1.0, on Nov 14-15, 2026, used for code generation, debugging, writing. The team reviewed and tested the output. All astronomical data are real SPHEREx, Gaia, WISE/CatWISE and survey data retrieved from NASA/IPAC and CDS services; no data was generated or simulated by AI.
 - **Imagery note**: The full-page background star field and the SPHEREx observatory image in the Instrument section are AI-generated illustrations used for presentation. They are not observational data; all scientific pixels, spectra, and measurements in Rendezvous come from the missions and archives listed above.
 
 ---
 
-*Built with passion for the 2026 NASA Space Apps Challenge by Team Afterlight · Evenstar1.*
+*Built with passion for the 2026 NASA Space Apps Challenge by Team Afterlight · Evenstar1 and Shreyash Sahare.*

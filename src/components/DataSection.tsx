@@ -347,7 +347,7 @@ export function Footer() {
           <p className="micro mt-5 text-cyan">Rendezvous</p>
           <p className="micro mt-2 text-ink/70">2026 NASA Space Apps Challenge · Planet X and SPHEREx</p>
           <p className="mt-5 text-[0.8125rem] leading-relaxed text-ink/80">
-            Built by <span className="font-semibold text-ink">Team Afterlight · Evenstar1</span>
+            Built by <span className="font-semibold text-ink">Team Afterlight · Evenstar1 and Shreyash Sahare</span>
           </p>
           <a
             href="https://github.com/evenstar1"
