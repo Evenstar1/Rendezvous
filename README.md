@@ -7,7 +7,6 @@
 [![NASA Space Apps](https://img.shields.io/badge/NASA%20Space%20Apps-2026%20Challenge-0B3D91?style=for-the-badge&logo=nasa&logoColor=white)](https://www.spaceappschallenge.org/)
 [![SPHEREx Mission](https://img.shields.io/badge/Mission-NASA%20SPHEREx-blue?style=for-the-badge)](https://spherex.caltech.edu/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge)](https://www.apache.org/licenses/LICENSE-2.0)
-[![Pure In--Browser](https://img.shields.io/badge/Architecture-100%25%20Client--Side-green?style=for-the-badge)](https://vitejs.dev/)
 
 ---
 
