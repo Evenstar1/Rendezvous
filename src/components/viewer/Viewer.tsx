@@ -129,6 +129,7 @@ function Transport({ shots, i, playing, onToggle, onSeek, fps, onFps }: { shots:
 }
 
 export function Viewer({ view, set, toL2, toSky, onLoadPack, onGuide, onAtlas, embed }: Props) {
+  void onAtlas;
   const sectionRef = useRef<HTMLElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const reduced = useMemo(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches, []);
@@ -144,6 +145,7 @@ const [liveTotal, setLiveTotal] = useState(0);
 const [liveError, setLiveError] = useState<string | null>(null);
 const [liveCancel, setLiveCancel] = useState<AbortController | null>(null);
 const [livePrompt, setLivePrompt] = useState<{ count: number; mb: number } | null>(null);
+void liveCancel; void livePrompt;
 const liveStartedRef = useRef<string | null>(null);
 const liveFovRef = useRef(view.fovL2);
 const liveRunIdRef = useRef(0);
@@ -249,10 +251,9 @@ const runLive = useCallback(async (fov = view.fovL2, force = false) => {
     } catch (err) {
       if (runId !== liveRunIdRef.current || ac.signal.aborted) return;
       const msg = err instanceof Error ? err.message : 'Live SPHEREx fetch failed.';
-      if (/TAP returned HTTP/i.test(msg)) setLiveError('IRSA is unreachable or returned an error. HiPS preview remains available.');
-      else if (/No SPHEREx coverage/i.test(msg)) setLiveError('No SPHEREx coverage at this position in the current release.');
-      else if (/none could be processed/i.test(msg)) setLiveError('SPHEREx frames were found, but the FITS cutouts could not be read (malformed or partial download).');
-      else setLiveError(msg);
+       if (/TAP returned HTTP/i.test(msg)) setLiveError('IRSA is unreachable or returned an error. HiPS preview remains available.');
+       else if (/none could be processed/i.test(msg)) setLiveError('SPHEREx frames were found, but the FITS cutouts could not be read (malformed or partial download).');
+       else setLiveError(msg);
       if (!loadedAny) set({ source: 'sky' });
     } finally {
       if (runId === liveRunIdRef.current) {
@@ -508,18 +509,7 @@ const runLive = useCallback(async (fov = view.fovL2, force = false) => {
           </aside>
 
           <div className="order-1 flex min-w-0 flex-col xl:order-2 xl:col-span-6">
-{(liveLoading || livePrompt || liveError) && (
-            <div className="mb-3 flex flex-wrap items-center gap-2 rounded border border-ink/15 bg-black/40 px-3 py-2">
-              {liveLoading && <span className="text-xs text-ink/75">Fetching SPHEREx frames: {liveDone} / {liveTotal || '?'}</span>}
-              {liveLoading && <div className="h-1.5 w-40 overflow-hidden rounded bg-ink/15"><div className="h-full bg-cyan transition-all" style={{ width: `${liveTotal ? (liveDone / liveTotal) * 100 : 0}%` }} /></div>}
-              {livePrompt && <span className="text-xs text-ink/75">{livePrompt.count} images found, about {livePrompt.mb} MB. Load anyway?</span>}
-              {livePrompt && <button type="button" onClick={() => { setLivePrompt(null); void runLive(view.fovL2, true); }} className="micro min-h-9 border border-ink/25 px-3 text-ink/75 transition-colors hover:border-ink hover:bg-ink hover:text-black">Load anyway</button>}
-              {liveLoading && <button type="button" onClick={() => liveCancel?.abort()} className="micro min-h-9 border border-ink/25 px-3 text-ink/75 transition-colors hover:border-ink hover:bg-ink hover:text-black">Cancel</button>}
-              {liveError && <p role="status" className="text-xs text-signal">{liveError}</p>}
-              {liveError && <button type="button" onClick={() => void runLive(view.fovL2, true)} className="micro min-h-9 border border-ink/25 px-3 text-ink/75 transition-colors hover:border-ink hover:bg-ink hover:text-black">Retry</button>}
-              {liveError && onAtlas && <button type="button" onClick={onAtlas} className="micro min-h-9 border border-cyan/40 px-3 text-cyan transition-colors hover:border-cyan hover:bg-cyan hover:text-black">Try a destination →</button>}
-            </div>
-            )}
+
             <div className="statusbar" aria-label="Frame status">
               {statusItems.map(([k, v], n) => (
                 <span key={k} className="flex items-baseline gap-2 whitespace-nowrap">
