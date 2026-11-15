@@ -2,6 +2,14 @@
   "name": "react-vite-tailwind",
   "private": true,
   "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Evenstar1/Rendezvous.git"
+  },
+  "homepage": "https://github.com/Evenstar1/Rendezvous",
+  "bugs": {
+    "url": "https://github.com/Evenstar1/Rendezvous/issues"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",

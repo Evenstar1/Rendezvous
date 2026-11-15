@@ -1,7 +1,7 @@
 # Rendezvous — SPHEREx Blink & Astrophysical Laboratory
 
 **2026 NASA Space Apps Challenge · Planet X and SPHEREx**  
-**Team Afterlight · Evenstar1** · [github.com/evenstar1](https://github.com/evenstar1)
+**Team Afterlight · Evenstar1** · [github.com/Evenstar1/Rendezvous](https://github.com/Evenstar1/Rendezvous)
 
 [![NASA Space Apps](https://img.shields.io/badge/NASA%20Space%20Apps-2026%20Challenge-0B3D91?style=for-the-badge&logo=nasa&logoColor=white)](https://www.spaceappschallenge.org/)
 [![SPHEREx Mission](https://img.shields.io/badge/Mission-NASA%20SPHEREx-blue?style=for-the-badge)](https://spherex.caltech.edu/)
@@ -385,8 +385,8 @@ Beyond bundled fields, entering arbitrary sky coordinates switches Rendezvous to
 ### Local Setup
 ```bash
 # Clone the repository
-git clone https://github.com/evenstar1/rendezvous.git
-cd rendezvous
+git clone https://github.com/Evenstar1/Rendezvous.git
+cd Rendezvous
 
 # Install dependencies
 npm install
