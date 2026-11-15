@@ -58,8 +58,8 @@ Bundled with five full offline Level-2 mission fields and live worldwide HiPS mu
 ### 1.1 NASA's SPHEREx Mission
 NASA's SPHEREx is a Medium-Class Explorer (MIDEX) space observatory executing an all-sky near-infrared spectral survey. Unlike traditional imaging telescopes equipped with discrete broadband filter wheels, SPHEREx mounts **six $2048 \times 2048$ HgCdTe detector arrays (D1 to D6)**, each fronted by a **Linear Variable Filter (LVF)**:
 - **Continuous Wavelength Range**: $0.75\,\mu\text{m}$ to $5.00\,\mu\text{m}$ across 102 discrete spectral channels.
-- **Spectral Resolution**: $R = \lambda / \Delta\lambda \approx 35$ for $0.75 \le \lambda \le 2.6\,\mu\text{m}$ (D1–D3), $R \approx 41$ for $2.6 \le \lambda \le 4.4\,\mu\text{m}$ (D4–D5), and $R \approx 130$ for $4.4 \le \lambda \le 5.0\,\mu\text{m}$ (D6).
-- **Spatial Resolution**: $6.15''$ pixels over a $3.5^\circ \times 7^\circ$ instantaneous field of view.
+- **Spectral Resolution**: R ≈ 41 for Bands 1-3 (0.75-2.42 µm), R ≈ 35 for Band 4 (2.42-3.82 µm), R ≈ 110 for Band 5 (3.82-4.42 µm) and R ≈ 130 for Band 6 (4.42-5.00 µm); detectors D1-D6 map to Bands 1-6.
+- **Spatial Resolution**: 6.15″ pixels; each array covers 3.5° × 3.5°, and the six arrays together form a 3.5° × 11° field of view.
 - **Survey Cadence**: Scans the entire celestial sphere every 6 months, generating four independent, full-sky multi-band maps across its baseline mission.
 
 ### 1.2 The Hunt for Planet X and Ultra-Cool Brown Dwarfs
@@ -186,7 +186,7 @@ The proper motion rate $\mu$ and temporal baseline $\Delta t$ evaluate two compe
    - **Keplerian Orbital Motion**: For a circular orbit around the Sun, the secular prograde angular speed is:
      $$\omega_{\text{Kep}} = \frac{360^\circ}{r^{3/2}}\text{ yr}^{-1} = \frac{1,296,000''/\text{yr}}{r^{3/2}} \implies r_{\text{Kepler}} = \left(\frac{1,296,000}{\mu}\right)^{2/3}\text{ AU}$$
    - **Equilibrium Temperature**: Radiative balance under solar insolation ($A \approx 0.3$ Bond albedo):
-     $$T_{\text{eq}} \approx 278 \cdot r_{\text{AU}}^{-1/2}\text{ K}$$
+     $$T_{\text{eq}} \approx 254 \cdot r_{\text{AU}}^{-1/2}\text{ K}$$
 2. **Galactic Stellar / Brown Dwarf Hypothesis**:
    - Proper motion reflects tangential space velocity through the Milky Way:
      $$v_t = 4.74047 \cdot \mu[''/\text{yr}] \cdot d[\text{pc}] \quad (\text{km s}^{-1})$$
